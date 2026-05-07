@@ -27,14 +27,30 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
 
 ## Creating apps and running tasks — prefer kappmaker
 
-When the user says "create this app", "make a new app", "generate a logo", "set up App Store Connect", "configure Adapty", "build the Android release", "publish to Play Store", "bump the version", or any similar mobile-app task — **default to the kappmaker skill**.
+When the user says "create this app", "make a new app", "generate a logo", "set up App Store Connect", "configure Adapty", "build the Android release", "publish to Play Store", "bump the version", or any similar mobile-app task — **default to the kappmaker tooling** (the `kappmaker` CLI + the `kappmaker:kappmaker` skill).
 
 Workflow:
 
-1. Check whether kappmaker has a command/sub-skill for what the user is asking. The skill description covers: app bootstrapping, AI logo & screenshot generation, screenshot translation, App Store Connect setup, Google Play Console setup (listings, subscriptions, IAPs, data safety), Adapty subscriptions, image processing, Android builds, keystore generation, store publishing, package refactoring, and version bumping.
+1. Check whether kappmaker can do what the user is asking. If unsure, run `kappmaker --help` or `kappmaker <command> --help`. Full docs: <https://cli.kappmaker.com/>.
 2. If kappmaker can do it → use kappmaker, don't reinvent it manually.
 3. If kappmaker can't → tell the user explicitly, then propose a manual approach.
 4. New apps live as a new subdirectory under `~/projects/` (e.g. `~/projects/<app-name>/`). After bootstrapping, `cd` in and continue work there.
+
+### Common kappmaker CLI commands
+
+| Command | Purpose |
+|---|---|
+| `kappmaker config init` | Set API keys & preferences (run once before anything else) |
+| `kappmaker create <AppName>` | Full 13-step app scaffolding workflow |
+| `kappmaker create-logo` | Generate AI app logo |
+| `kappmaker create-appstore-app` | Create App Store Connect listing |
+| `kappmaker gpc setup` | Configure Google Play Console |
+| `kappmaker adapty setup` | Set up Adapty subscriptions / paywalls |
+| `kappmaker publish` | Build + upload to stores |
+| `kappmaker refactor` | Rename package / app ID |
+| `kappmaker generate-screenshots` / `translate-screenshots` | Screenshot tooling |
+
+If a credential is missing, kappmaker will say so — re-run `kappmaker config init` to add it.
 
 ## Tech stack defaults
 

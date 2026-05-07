@@ -106,7 +106,11 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 log "Installing Claude Code (global npm)"
 $SUDO npm install -g @anthropic-ai/claude-code
 
-# ---------- 8. GitHub CLI ----------
+# ---------- 8. KAppMaker CLI ----------
+log "Installing KAppMaker CLI (global npm)"
+$SUDO npm install -g kappmaker
+
+# ---------- 9. GitHub CLI ----------
 log "Installing GitHub CLI"
 if ! command -v gh >/dev/null; then
   $SUDO mkdir -p /etc/apt/keyrings
@@ -119,7 +123,7 @@ if ! command -v gh >/dev/null; then
   $SUDO apt-get install -y gh
 fi
 
-# ---------- 9. persist env vars ----------
+# ---------- 10. persist env vars ----------
 log "Persisting env vars to ~/.bashrc"
 BLOCK_MARK="# --- KAppMaker VPS env (managed by setup-vps.sh) ---"
 if ! grep -qF "$BLOCK_MARK" "$HOME/.bashrc" 2>/dev/null; then
@@ -135,7 +139,7 @@ export PATH="\$JAVA_HOME/bin:\$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:\$ANDRO
 EOF
 fi
 
-# ---------- 10. projects directory + top-level CLAUDE.md ----------
+# ---------- 11. projects directory + top-level CLAUDE.md ----------
 PROJECTS_DIR="$HOME/projects"
 CLAUDE_MD_URL="${CLAUDE_MD_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/projects-CLAUDE.md}"
 
@@ -163,31 +167,38 @@ NEXT STEPS (interactive — cannot be scripted)
 1. Reload your shell so env vars take effect:
      source ~/.bashrc
 
-2. Log into Claude with your subscription:
+2. Initialize kappmaker (API keys, store credentials, Adapty, etc.):
+     kappmaker config init
+   Sets up the credentials kappmaker needs (App Store Connect API key,
+   Google Play service account JSON, Adapty token, etc.). Do this BEFORE
+   anything else — app creation / publishing tasks depend on it.
+   Docs: https://cli.kappmaker.com/
+
+3. Log into Claude with your subscription:
      cd ~/projects
      claude
    (Open the printed URL in your laptop browser, paste the auth code back.)
    Always start Claude from ~/projects so the workspace CLAUDE.md is loaded.
 
-3. Inside Claude, install the plugins:
+4. Inside Claude, install the plugins:
      /plugin marketplace add KAppMaker/KAppMaker-CLI
      /plugin install kappmaker@KAppMaker-CLI
      /plugin marketplace add anthropics/claude-code
      /plugin install telegram@anthropic
 
-4. Configure Telegram with your bot token:
+5. Configure Telegram with your bot token:
      /telegram:configure
 
-5. Pair your Telegram account:
+6. Pair your Telegram account:
      /telegram:access
    Then send /start to your bot in Telegram and approve the pairing.
 
-6. Run Claude inside tmux so it survives SSH disconnect:
+7. Run Claude inside tmux so it survives SSH disconnect:
      tmux new -s claude
      cd ~/projects && claude
    Detach: Ctrl+B then D    Reattach: tmux attach -t claude
 
-7. Optional: log into GitHub CLI for app repo pushes:
+8. Optional: log into GitHub CLI for app repo pushes:
      gh auth login
 
 ────────────────────────────────────────────────────────────

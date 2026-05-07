@@ -32,6 +32,7 @@ The script is idempotent — re-running it skips anything already installed.
 | Node.js | 22 | Runtime for Claude Code |
 | Bun | latest | Required by the Telegram plugin |
 | Claude Code | latest | `@anthropic-ai/claude-code` global npm |
+| KAppMaker CLI | latest | `kappmaker` global npm — used by the kappmaker plugin |
 | GitHub CLI (`gh`) | latest | Push generated app repos to GitHub |
 
 Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `BUN_INSTALL`, `PATH`) are persisted to `~/.bashrc` in a marked block.
@@ -47,13 +48,20 @@ The script prints these steps when it finishes; they can't be automated.
    source ~/.bashrc
    ```
 
-2. **Log into Claude** with your Pro/Max subscription
+2. **Initialize kappmaker** with your API keys / store credentials
    ```bash
+   kappmaker config init
+   ```
+   Walks you through the credentials kappmaker needs (App Store Connect API key, Google Play service account JSON, Adapty token, etc.). Do this *first* — app creation and publishing tasks depend on it. Full docs: <https://cli.kappmaker.com/>
+
+3. **Log into Claude** with your Pro/Max subscription
+   ```bash
+   cd ~/projects
    claude
    ```
-   Open the printed URL in your laptop browser, paste the auth code back.
+   Open the printed URL in your laptop browser, paste the auth code back. Always start Claude from `~/projects` so the workspace CLAUDE.md is loaded.
 
-3. **Install plugins** (inside Claude)
+4. **Install plugins** (inside Claude)
    ```
    /plugin marketplace add KAppMaker/KAppMaker-CLI
    /plugin install kappmaker@KAppMaker-CLI
@@ -61,25 +69,25 @@ The script prints these steps when it finishes; they can't be automated.
    /plugin install telegram@anthropic
    ```
 
-4. **Configure Telegram** with your BotFather token
+5. **Configure Telegram** with your BotFather token
    ```
    /telegram:configure
    ```
 
-5. **Pair your Telegram account**
+6. **Pair your Telegram account**
    ```
    /telegram:access
    ```
    Send `/start` to your bot from Telegram, then approve the pairing in the terminal.
 
-6. **Run inside tmux** so Claude survives SSH disconnect
+7. **Run inside tmux** so Claude survives SSH disconnect
    ```bash
    tmux new -s claude
-   claude
+   cd ~/projects && claude
    ```
    Detach: `Ctrl+B` then `D` · Reattach: `tmux attach -t claude`
 
-7. **Optional — log into GitHub CLI** for app repo pushes
+8. **Optional — log into GitHub CLI** for app repo pushes
    ```bash
    gh auth login
    ```
