@@ -43,25 +43,21 @@ A `~/projects/` directory is created with a top-level `CLAUDE.md` that defines w
 
 The script prints these steps when it finishes; they can't be automated.
 
+> Note: the bootstrap script runs `kappmaker config init` interactively at the end. If for any reason it was skipped (e.g. no TTY), run it manually before doing anything else: `kappmaker config init`. Docs: <https://cli.kappmaker.com/>.
+
 1. **Reload shell**
    ```bash
    source ~/.bashrc
    ```
 
-2. **Initialize kappmaker** with your API keys / store credentials
-   ```bash
-   kappmaker config init
-   ```
-   Walks you through the credentials kappmaker needs (App Store Connect API key, Google Play service account JSON, Adapty token, etc.). Do this *first* — app creation and publishing tasks depend on it. Full docs: <https://cli.kappmaker.com/>
-
-3. **Log into Claude** with your Pro/Max subscription
+2. **Log into Claude** with your Pro/Max subscription
    ```bash
    cd ~/projects
    claude
    ```
    Open the printed URL in your laptop browser, paste the auth code back. Always start Claude from `~/projects` so the workspace CLAUDE.md is loaded.
 
-4. **Install plugins** (inside Claude)
+3. **Install plugins** (inside Claude)
    ```
    /plugin marketplace add KAppMaker/KAppMaker-CLI
    /plugin install kappmaker@KAppMaker-CLI
@@ -69,25 +65,25 @@ The script prints these steps when it finishes; they can't be automated.
    /plugin install telegram@anthropic
    ```
 
-5. **Configure Telegram** with your BotFather token
+4. **Configure Telegram** with your BotFather token
    ```
    /telegram:configure
    ```
 
-6. **Pair your Telegram account**
+5. **Pair your Telegram account**
    ```
    /telegram:access
    ```
    Send `/start` to your bot from Telegram, then approve the pairing in the terminal.
 
-7. **Run inside tmux** so Claude survives SSH disconnect
+6. **Run inside tmux** so Claude survives SSH disconnect
    ```bash
    tmux new -s claude
    cd ~/projects && claude
    ```
    Detach: `Ctrl+B` then `D` · Reattach: `tmux attach -t claude`
 
-8. **Optional — log into GitHub CLI** for app repo pushes
+7. **Optional — log into GitHub CLI** for app repo pushes
    ```bash
    gh auth login
    ```

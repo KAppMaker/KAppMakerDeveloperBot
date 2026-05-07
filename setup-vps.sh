@@ -156,6 +156,15 @@ else
   log "Top-level CLAUDE.md already exists, skipping (delete it to fetch the default again)"
 fi
 
+# ---------- 12. kappmaker config init (interactive) ----------
+log "Running 'kappmaker config init' (will prompt for API keys / credentials)"
+if [[ -e /dev/tty ]]; then
+  # Read from /dev/tty so prompts work even when script is run via curl|bash
+  kappmaker config init </dev/tty || warn "kappmaker config init exited non-zero — re-run manually if needed"
+else
+  warn "No /dev/tty available — skipping. Run 'kappmaker config init' manually after this script finishes."
+fi
+
 # ---------- done ----------
 log "System install complete!"
 cat <<'NEXT'
@@ -167,38 +176,34 @@ NEXT STEPS (interactive — cannot be scripted)
 1. Reload your shell so env vars take effect:
      source ~/.bashrc
 
-2. Initialize kappmaker (API keys, store credentials, Adapty, etc.):
-     kappmaker config init
-   Sets up the credentials kappmaker needs (App Store Connect API key,
-   Google Play service account JSON, Adapty token, etc.). Do this BEFORE
-   anything else — app creation / publishing tasks depend on it.
-   Docs: https://cli.kappmaker.com/
+   (If you skipped 'kappmaker config init' above, run it now.
+    Docs: https://cli.kappmaker.com/)
 
-3. Log into Claude with your subscription:
+2. Log into Claude with your subscription:
      cd ~/projects
      claude
    (Open the printed URL in your laptop browser, paste the auth code back.)
    Always start Claude from ~/projects so the workspace CLAUDE.md is loaded.
 
-4. Inside Claude, install the plugins:
+3. Inside Claude, install the plugins:
      /plugin marketplace add KAppMaker/KAppMaker-CLI
      /plugin install kappmaker@KAppMaker-CLI
      /plugin marketplace add anthropics/claude-code
      /plugin install telegram@anthropic
 
-5. Configure Telegram with your bot token:
+4. Configure Telegram with your bot token:
      /telegram:configure
 
-6. Pair your Telegram account:
+5. Pair your Telegram account:
      /telegram:access
    Then send /start to your bot in Telegram and approve the pairing.
 
-7. Run Claude inside tmux so it survives SSH disconnect:
+6. Run Claude inside tmux so it survives SSH disconnect:
      tmux new -s claude
      cd ~/projects && claude
    Detach: Ctrl+B then D    Reattach: tmux attach -t claude
 
-8. Optional: log into GitHub CLI for app repo pushes:
+7. Optional: log into GitHub CLI for app repo pushes:
      gh auth login
 
 ────────────────────────────────────────────────────────────
