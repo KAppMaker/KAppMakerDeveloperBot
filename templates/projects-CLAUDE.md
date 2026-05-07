@@ -71,6 +71,23 @@ Responses go to Telegram on the user's phone. Optimize for that:
 - Long-running tasks (builds, publishes): send a brief "starting X" message, then a final "done / failed" message. Avoid streaming verbose progress.
 - Use the Telegram plugin's `react` for quick acknowledgments when no text reply is needed.
 
+## Sending generated assets back via Telegram
+
+When a tool generates an asset the user would want to see — logos, screenshots, build artifacts (APK/AAB), exported PDFs — **attach the file to your Telegram reply** via the `files` parameter. Don't just print the file path in text; the user is on their phone and can't browse the VPS filesystem.
+
+```
+reply({ chat_id: "...", text: "Here's the logo:", files: ["/root/projects/<app>/Assets/logo.png"] })
+```
+
+Rules:
+
+- Use **absolute paths** (`/root/projects/...`, not `~/projects/...` — `~` doesn't expand inside the tool call).
+- Logos / screenshots → attach the image.
+- Build outputs (APK / AAB) → attach if under 50 MB (Telegram Bot API limit). Above that, tell the user the path and suggest external hosting (S3 / R2 / etc.).
+- Photo uploads via `sendPhoto` are capped at 10 MB and Telegram will compress them — for full-quality screenshots over 10 MB, send as document.
+- Don't attach intermediate / working files unless the user asks.
+- The VPS does NOT need to be publicly reachable for this — uploads go directly from VPS → Telegram servers via outbound HTTPS.
+
 ## Safety
 
 - Never push to `main` or publish to production stores without explicit user confirmation.

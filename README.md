@@ -83,10 +83,67 @@ The script prints these steps when it finishes; they can't be automated.
    ```
    Detach: `Ctrl+B` then `D` · Reattach: `tmux attach -t claude`
 
-7. **Optional — log into GitHub CLI** for app repo pushes
+7. **Log into GitHub CLI** for app repo pushes
    ```bash
    gh auth login
    ```
+   Use the dedicated bot account from the *GitHub authentication* section below — **don't use your personal account on the VPS**.
+
+## GitHub authentication (recommended)
+
+A VPS can be compromised. If your *personal* GitHub credentials live on it, an attacker gets your private repos, can force-push to `main`, etc. Use a dedicated **machine user account** instead — fully isolated, easy to revoke.
+
+### One-time setup
+
+1. **Create a separate GitHub account** for the bot (free). Use a `+` alias on your email so it lands in your inbox: `you+kappmakerbot@gmail.com` → register at <https://github.com/signup>. Enable 2FA on it (separate authenticator entry from your personal one).
+
+2. **Add it to your `KAppMaker` org** with the *Member* role (browser):
+   - Org → People → Invite member
+   - Repos it needs to push to → Manage access → grant write
+
+3. **Generate an SSH key on the VPS** for this account:
+   ```bash
+   ssh-keygen -t ed25519 -C "kappmaker-bot-vps" -f ~/.ssh/kappmaker_bot
+   cat ~/.ssh/kappmaker_bot.pub
+   ```
+   Copy the printed public key.
+
+4. **Add the public key to the bot account** (browser, logged in as the bot): <https://github.com/settings/keys> → New SSH key.
+   *Optional hardening:* if your VPS has a static IP, prefix the key with `from="1.2.3.4" ` so it only works from that IP.
+
+5. **Tell SSH to use this key for github.com** (on the VPS):
+   ```bash
+   cat >> ~/.ssh/config <<'EOF'
+   Host github.com
+     HostName github.com
+     User git
+     IdentityFile ~/.ssh/kappmaker_bot
+     IdentitiesOnly yes
+   EOF
+   chmod 600 ~/.ssh/config
+   ```
+
+6. **Set the git identity** so commits are attributed to the bot, not `root@vps`:
+   ```bash
+   git config --global user.name "KAppMaker Bot"
+   git config --global user.email "you+kappmakerbot@gmail.com"
+   ```
+
+7. **Verify**:
+   ```bash
+   ssh -T git@github.com
+   # → "Hi kappmaker-bot! You've successfully authenticated..."
+   ```
+
+8. **Now log into `gh`** (step 7 above) — choose **SSH** and point at the same key file. `gh` will use it for HTTPS API calls and for git push.
+
+### What this protects against
+
+| Scenario | With personal creds | With bot account |
+|---|---|---|
+| VPS gets root-level compromise | Attacker gets all your private repos, can force-push, delete branches | Attacker only gets repos in the KAppMaker org that bot has write to |
+| Bot key leaks | Have to rotate personal key (affects all your machines) | Revoke one key on one account, done |
+| You stop using the VPS | Need to remember to revoke the key | Just delete the bot account or remove from org |
 
 ## Using it from Telegram
 
