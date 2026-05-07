@@ -30,10 +30,13 @@ The script is idempotent — re-running it skips anything already installed.
 | Android SDK cmdline-tools + `platforms;android-34` + `build-tools;34.0.0` | latest | Build & sign APK/AAB on the VPS |
 | Gradle | 9.4.1 | Standalone Gradle (project wrappers override this) |
 | Node.js | 22 | Runtime for Claude Code |
+| Bun | latest | Required by the Telegram plugin |
 | Claude Code | latest | `@anthropic-ai/claude-code` global npm |
 | GitHub CLI (`gh`) | latest | Push generated app repos to GitHub |
 
-Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `PATH`) are persisted to `~/.bashrc` in a marked block.
+Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `BUN_INSTALL`, `PATH`) are persisted to `~/.bashrc` in a marked block.
+
+A `~/projects/` directory is created with a top-level `CLAUDE.md` that defines workspace-wide rules: how to switch between projects ("switch to fittracker"), tech-stack defaults, and Telegram-friendly output style. Each app you create lives in its own subdirectory and can have its own `CLAUDE.md` for project-specific rules.
 
 ## Post-install (interactive — do these on the VPS)
 

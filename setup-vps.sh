@@ -94,11 +94,19 @@ if ! command -v node >/dev/null || ! node --version | grep -q '^v22'; then
   $SUDO apt-get install -y nodejs
 fi
 
-# ---------- 6. Claude Code ----------
+# ---------- 6. Bun (required by Telegram plugin) ----------
+log "Installing Bun"
+if ! command -v bun >/dev/null && [[ ! -x "$HOME/.bun/bin/bun" ]]; then
+  curl -fsSL https://bun.sh/install | bash
+fi
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# ---------- 7. Claude Code ----------
 log "Installing Claude Code (global npm)"
 $SUDO npm install -g @anthropic-ai/claude-code
 
-# ---------- 7. GitHub CLI ----------
+# ---------- 8. GitHub CLI ----------
 log "Installing GitHub CLI"
 if ! command -v gh >/dev/null; then
   $SUDO mkdir -p /etc/apt/keyrings
@@ -111,7 +119,7 @@ if ! command -v gh >/dev/null; then
   $SUDO apt-get install -y gh
 fi
 
-# ---------- 8. persist env vars ----------
+# ---------- 9. persist env vars ----------
 log "Persisting env vars to ~/.bashrc"
 BLOCK_MARK="# --- KAppMaker VPS env (managed by setup-vps.sh) ---"
 if ! grep -qF "$BLOCK_MARK" "$HOME/.bashrc" 2>/dev/null; then
@@ -121,9 +129,27 @@ $BLOCK_MARK
 export JAVA_HOME="$JAVA_HOME"
 export ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT"
 export ANDROID_HOME="\$ANDROID_SDK_ROOT"
-export PATH="\$JAVA_HOME/bin:\$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:\$ANDROID_SDK_ROOT/platform-tools:$GRADLE_DIR/bin:\$PATH"
+export BUN_INSTALL="\$HOME/.bun"
+export PATH="\$JAVA_HOME/bin:\$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:\$ANDROID_SDK_ROOT/platform-tools:$GRADLE_DIR/bin:\$BUN_INSTALL/bin:\$PATH"
 # --- end KAppMaker block ---
 EOF
+fi
+
+# ---------- 10. projects directory + top-level CLAUDE.md ----------
+PROJECTS_DIR="$HOME/projects"
+CLAUDE_MD_URL="${CLAUDE_MD_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/projects-CLAUDE.md}"
+
+log "Creating projects directory at $PROJECTS_DIR"
+mkdir -p "$PROJECTS_DIR"
+
+if [[ ! -f "$PROJECTS_DIR/CLAUDE.md" ]]; then
+  log "Downloading workspace CLAUDE.md from $CLAUDE_MD_URL"
+  if ! curl -fsSL "$CLAUDE_MD_URL" -o "$PROJECTS_DIR/CLAUDE.md"; then
+    warn "Failed to download CLAUDE.md template — you can add one manually later at $PROJECTS_DIR/CLAUDE.md"
+    rm -f "$PROJECTS_DIR/CLAUDE.md"
+  fi
+else
+  log "Top-level CLAUDE.md already exists, skipping (delete it to fetch the default again)"
 fi
 
 # ---------- done ----------
@@ -138,8 +164,10 @@ NEXT STEPS (interactive — cannot be scripted)
      source ~/.bashrc
 
 2. Log into Claude with your subscription:
+     cd ~/projects
      claude
    (Open the printed URL in your laptop browser, paste the auth code back.)
+   Always start Claude from ~/projects so the workspace CLAUDE.md is loaded.
 
 3. Inside Claude, install the plugins:
      /plugin marketplace add KAppMaker/KAppMaker-CLI
@@ -156,7 +184,7 @@ NEXT STEPS (interactive — cannot be scripted)
 
 6. Run Claude inside tmux so it survives SSH disconnect:
      tmux new -s claude
-     claude
+     cd ~/projects && claude
    Detach: Ctrl+B then D    Reattach: tmux attach -t claude
 
 7. Optional: log into GitHub CLI for app repo pushes:
