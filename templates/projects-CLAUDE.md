@@ -71,6 +71,30 @@ Responses go to Telegram on the user's phone. Optimize for that:
 - Long-running tasks (builds, publishes): send a brief "starting X" message, then a final "done / failed" message. Avoid streaming verbose progress.
 - Use the Telegram plugin's `react` for quick acknowledgments when no text reply is needed.
 
+## Web (Wasm/JS) build previews
+
+After building a web target (typically `./gradlew :webApp:jsBrowserDistribution`), the static output lives at `<project>/MobileApp/webApp/build/dist/js/productionExecutable`. The user can't open it locally — they're on their phone — so expose it as a public URL with the `preview` helper:
+
+```bash
+preview <build-output-dir>
+# prints e.g. https://random-words.trycloudflare.com  on stdout
+```
+
+How it works: spins up a local `python3 -m http.server` on port 8080, opens a Cloudflare quick tunnel pointing at it, returns the public HTTPS URL. No account, no domain, no firewall changes.
+
+After a successful Wasm/JS build:
+
+1. Run `preview <build-output-dir>` and capture stdout
+2. Telegram-reply the URL: `"Build done — preview: https://...trycloudflare.com (live until you stop it)"`
+3. When the user is done, run `preview-stop` (single port) or `preview-stop --all` (everything)
+
+Notes:
+
+- Each call to `preview` kills the previous server on the same port, so iterating is fine — same project = URL refreshes with the new build
+- Different ports for different projects in parallel: `preview <dir> 8081`, `preview <dir2> 8082`
+- The URL changes every time the tunnel restarts. Don't promise stability.
+- For large/heavy assets, the first load may take a few seconds while Cloudflare warms up.
+
 ## Sending generated assets back via Telegram
 
 When a tool generates an asset the user would want to see — logos, screenshots, build artifacts (APK/AAB), exported PDFs — **attach the file to your Telegram reply** via the `files` parameter. Don't just print the file path in text; the user is on their phone and can't browse the VPS filesystem.

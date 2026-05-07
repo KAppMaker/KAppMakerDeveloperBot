@@ -34,6 +34,8 @@ The script is idempotent — re-running it skips anything already installed.
 | Claude Code | latest | `@anthropic-ai/claude-code` global npm |
 | KAppMaker CLI | latest | `kappmaker` global npm — used by the kappmaker plugin |
 | GitHub CLI (`gh`) | latest | Push generated app repos to GitHub |
+| `cloudflared` | latest | Cloudflare quick tunnels for web (Wasm/JS) preview URLs |
+| `preview` / `preview-stop` | bundled | Helper scripts in `~/bin` that wrap `cloudflared` for one-command preview links |
 
 Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `BUN_INSTALL`, `PATH`) are persisted to `~/.bashrc` in a marked block.
 
@@ -76,12 +78,14 @@ The script prints these steps when it finishes; they can't be automated.
    ```
    Send `/start` to your bot from Telegram, then approve the pairing in the terminal.
 
-6. **Run inside tmux** so Claude survives SSH disconnect
+6. **Run inside tmux with the Telegram channel active** so Claude listens for your bot messages and survives SSH disconnect
    ```bash
    tmux new -s claude
-   cd ~/projects && claude
+   cd ~/projects && claude --channels plugin:telegram@claude-plugins-official
    ```
    Detach: `Ctrl+B` then `D` · Reattach: `tmux attach -t claude`
+
+   > **Important:** plain `claude` (without `--channels`) starts a normal interactive session and does **not** listen on Telegram. The `--channels` flag is what opens the listener.
 
 7. **Log into GitHub CLI** for app repo pushes
    ```bash
@@ -144,6 +148,30 @@ A VPS can be compromised. If your *personal* GitHub credentials live on it, an a
 | VPS gets root-level compromise | Attacker gets all your private repos, can force-push, delete branches | Attacker only gets repos in the KAppMaker org that bot has write to |
 | Bot key leaks | Have to rotate personal key (affects all your machines) | Revoke one key on one account, done |
 | You stop using the VPS | Need to remember to revoke the key | Just delete the bot account or remove from org |
+
+## Web previews (Wasm / JS builds)
+
+When kappmaker builds the web target, the output is just static files — but you're on your phone, so the script bundles a `preview` helper that gives you a public URL via Cloudflare Tunnel.
+
+```bash
+# After: ./gradlew :webApp:jsBrowserDistribution
+preview ~/projects/<app>/MobileApp/webApp/build/dist/js/productionExecutable
+# → prints e.g. https://random-words-here.trycloudflare.com
+```
+
+Open the URL on your phone and you're previewing your KMP web build. When you're done:
+
+```bash
+preview-stop          # stop the default-port preview
+preview-stop --all    # stop everything
+```
+
+Claude knows this workflow — just ask via Telegram: *"build webapp for fittracker and send me the preview link"* and it'll run the build, start the tunnel, and reply with the URL.
+
+**Tunnel notes:**
+- URL changes every time the tunnel restarts (it's a free Cloudflare quick tunnel — no account needed)
+- Tunnel only lives while `cloudflared` is running on the VPS
+- For a permanent URL, set up a *named* Cloudflare Tunnel against your own domain — out of scope here, but the same `cloudflared` binary supports it
 
 ## Using it from Telegram
 

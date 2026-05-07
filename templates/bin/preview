@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# preview — serve a static directory and expose it via Cloudflare Tunnel.
+# Prints the public https URL on stdout; logs/PIDs go in ~/.preview/.
+#
+# Usage: preview <directory> [port]
+#   preview ~/projects/fittracker/MobileApp/webApp/build/dist/js/productionExecutable
+#   preview ./build 9090
+
+set -euo pipefail
+
+DIR="${1:?Usage: preview <directory> [port]}"
+PORT="${2:-8080}"
+DIR="$(realpath "$DIR")"
+
+[[ -d "$DIR" ]] || { echo "Not a directory: $DIR" >&2; exit 1; }
+command -v cloudflared >/dev/null || { echo "cloudflared not installed" >&2; exit 1; }
+command -v python3     >/dev/null || { echo "python3 not installed"     >&2; exit 1; }
+
+STATE_DIR="$HOME/.preview"
+mkdir -p "$STATE_DIR"
+HTTP_PID="$STATE_DIR/http-${PORT}.pid"
+TUN_PID="$STATE_DIR/tunnel-${PORT}.pid"
+TUN_LOG="$STATE_DIR/tunnel-${PORT}.log"
+URL_FILE="$STATE_DIR/url-${PORT}.txt"
+
+# Kill any previous preview on this port
+for f in "$HTTP_PID" "$TUN_PID"; do
+  if [[ -f "$f" ]]; then
+    kill "$(cat "$f")" 2>/dev/null || true
+    rm -f "$f"
+  fi
+done
+sleep 1
+
+# Static server, bound to loopback (cloudflared is the only thing that needs to reach it)
+( cd "$DIR" && nohup python3 -m http.server "$PORT" --bind 127.0.0.1 ) >/dev/null 2>&1 &
+echo $! > "$HTTP_PID"
+
+# Cloudflare quick tunnel — no account needed, returns *.trycloudflare.com URL
+nohup cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:${PORT}" > "$TUN_LOG" 2>&1 &
+echo $! > "$TUN_PID"
+
+# Wait up to 30s for the URL to appear in the tunnel log
+URL=""
+for _ in {1..30}; do
+  URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' "$TUN_LOG" | head -1 || true)
+  [[ -n "$URL" ]] && break
+  sleep 1
+done
+
+if [[ -z "$URL" ]]; then
+  echo "ERROR: tunnel didn't return a URL within 30s. Last log lines:" >&2
+  tail -20 "$TUN_LOG" >&2
+  exit 1
+fi
+
+echo "$URL" > "$URL_FILE"
+echo "$URL"

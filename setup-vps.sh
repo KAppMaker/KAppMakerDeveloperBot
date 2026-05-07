@@ -123,6 +123,27 @@ if ! command -v gh >/dev/null; then
   $SUDO apt-get install -y gh
 fi
 
+# ---------- 9b. cloudflared (for web preview tunnels) ----------
+log "Installing cloudflared"
+if ! command -v cloudflared >/dev/null; then
+  TMP_DEB="$(mktemp --suffix=.deb)"
+  wget -q "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}.deb" -O "$TMP_DEB"
+  $SUDO dpkg -i "$TMP_DEB"
+  rm -f "$TMP_DEB"
+fi
+
+# ---------- 9c. preview helper scripts ----------
+PREVIEW_BASE_URL="${PREVIEW_BASE_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/bin}"
+log "Installing preview scripts to ~/bin"
+mkdir -p "$HOME/bin"
+for script in preview preview-stop; do
+  if curl -fsSL "$PREVIEW_BASE_URL/$script" -o "$HOME/bin/$script"; then
+    chmod +x "$HOME/bin/$script"
+  else
+    warn "Failed to download $script — fetch manually later from $PREVIEW_BASE_URL/$script"
+  fi
+done
+
 # ---------- 10. persist env vars ----------
 log "Persisting env vars to ~/.bashrc"
 BLOCK_MARK="# --- KAppMaker VPS env (managed by setup-vps.sh) ---"
@@ -134,7 +155,7 @@ export JAVA_HOME="$JAVA_HOME"
 export ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT"
 export ANDROID_HOME="\$ANDROID_SDK_ROOT"
 export BUN_INSTALL="\$HOME/.bun"
-export PATH="\$JAVA_HOME/bin:\$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:\$ANDROID_SDK_ROOT/platform-tools:$GRADLE_DIR/bin:\$BUN_INSTALL/bin:\$PATH"
+export PATH="\$HOME/bin:\$JAVA_HOME/bin:\$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:\$ANDROID_SDK_ROOT/platform-tools:$GRADLE_DIR/bin:\$BUN_INSTALL/bin:\$PATH"
 # --- end KAppMaker block ---
 EOF
 fi
@@ -198,10 +219,14 @@ NEXT STEPS (interactive — cannot be scripted)
      /telegram:access
    Then send /start to your bot in Telegram and approve the pairing.
 
-6. Run Claude inside tmux so it survives SSH disconnect:
+6. Run Claude inside tmux WITH the Telegram channel active
+   (so messages from your bot are received):
      tmux new -s claude
-     cd ~/projects && claude
+     cd ~/projects && claude --channels plugin:telegram@claude-plugins-official
    Detach: Ctrl+B then D    Reattach: tmux attach -t claude
+
+   Note: plain `claude` starts a normal interactive session and does NOT
+   listen on Telegram. The --channels flag is required.
 
 7. Optional: log into GitHub CLI for app repo pushes:
      gh auth login

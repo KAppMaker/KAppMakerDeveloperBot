@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# preview-stop — kill the static server and Cloudflare tunnel started by `preview`.
+# Usage: preview-stop [port]      (default port: 8080)
+#        preview-stop --all       (stop every preview)
+
+set -euo pipefail
+
+STATE_DIR="$HOME/.preview"
+[[ -d "$STATE_DIR" ]] || { echo "No previews running."; exit 0; }
+
+stop_port() {
+  local port="$1"
+  local stopped=0
+  for f in "$STATE_DIR/http-${port}.pid" "$STATE_DIR/tunnel-${port}.pid"; do
+    if [[ -f "$f" ]]; then
+      pid="$(cat "$f")"
+      if kill "$pid" 2>/dev/null; then stopped=1; fi
+      rm -f "$f"
+    fi
+  done
+  rm -f "$STATE_DIR/url-${port}.txt"
+  if [[ "$stopped" -eq 1 ]]; then
+    echo "Stopped preview on port ${port}."
+  else
+    echo "No active preview on port ${port}."
+  fi
+}
+
+if [[ "${1:-}" == "--all" ]]; then
+  found=0
+  for f in "$STATE_DIR"/http-*.pid "$STATE_DIR"/tunnel-*.pid; do
+    [[ -e "$f" ]] || continue
+    found=1
+    port="$(basename "$f" | sed -E 's/^(http|tunnel)-(.+)\.pid$/\2/')"
+    stop_port "$port"
+  done
+  [[ "$found" -eq 0 ]] && echo "No previews running."
+else
+  stop_port "${1:-8080}"
+fi
