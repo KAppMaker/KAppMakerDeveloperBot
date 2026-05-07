@@ -22,8 +22,10 @@ command -v apt-get >/dev/null || die "This script targets Debian/Ubuntu (apt-get
 
 if [[ "$(id -u)" -eq 0 ]]; then
   SUDO=""
+  SUDO_E=""
 else
   SUDO="sudo"
+  SUDO_E="sudo -E"
   command -v sudo >/dev/null || die "Need sudo or run as root."
 fi
 
@@ -88,7 +90,7 @@ export PATH="$GRADLE_DIR/bin:$PATH"
 # ---------- 5. Node.js 22 ----------
 log "Installing Node.js 22"
 if ! command -v node >/dev/null || ! node --version | grep -q '^v22'; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO -E bash -
+  curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO_E bash -
   $SUDO apt-get install -y nodejs
 fi
 
