@@ -39,7 +39,12 @@ The script is idempotent — re-running it skips anything already installed.
 
 Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `BUN_INSTALL`, `PATH`) are persisted to `~/.bashrc` in a marked block.
 
-A `~/projects/` directory is created with a top-level `CLAUDE.md` that defines workspace-wide rules: how to switch between projects ("switch to fittracker"), tech-stack defaults, and Telegram-friendly output style. Each app you create lives in its own subdirectory and can have its own `CLAUDE.md` for project-specific rules.
+A `~/projects/` directory is created with two workspace files:
+
+- `CLAUDE.md` — workspace-wide rules: project switching ("switch to fittracker"), project lifecycle, kappmaker-first workflow, build previews, asset attachment, safety confirmations, and Telegram output style.
+- `MEMORY.md` — user-controlled persistent memory. Empty by default; you populate it via Telegram with messages like *"remember: all new repos should be private"* / *"forget X"* / *"what do you remember"*. Claude reads it before every meaningful task and respects it (memory entries override CLAUDE.md defaults when they conflict).
+
+Each app you create lives in its own subdirectory and can have its own `CLAUDE.md` for project-specific rules.
 
 ## Post-install (interactive — do these on the VPS)
 
@@ -182,6 +187,13 @@ Once paired, message your bot. The `kappmaker` skill auto-loads when your prompt
 - `Build the Android release`
 - `Publish to Play Store internal testing`
 - `Bump version to 1.2.0`
+
+**Memory commands** — teach Claude your preferences once, they stick across sessions:
+
+- `Remember: all new GitHub repos should be private`
+- `Remember: use MIT license by default`
+- `What do you remember?` — Claude shows the contents of `~/projects/MEMORY.md`
+- `Forget the MIT license preference`
 
 ## Limitations
 

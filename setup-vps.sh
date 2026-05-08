@@ -160,9 +160,10 @@ export PATH="\$HOME/bin:\$JAVA_HOME/bin:\$ANDROID_SDK_ROOT/cmdline-tools/latest/
 EOF
 fi
 
-# ---------- 11. projects directory + top-level CLAUDE.md ----------
+# ---------- 11. projects directory + top-level CLAUDE.md / MEMORY.md ----------
 PROJECTS_DIR="$HOME/projects"
 CLAUDE_MD_URL="${CLAUDE_MD_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/projects-CLAUDE.md}"
+MEMORY_MD_URL="${MEMORY_MD_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/projects-MEMORY.md}"
 
 log "Creating projects directory at $PROJECTS_DIR"
 mkdir -p "$PROJECTS_DIR"
@@ -175,6 +176,16 @@ if [[ ! -f "$PROJECTS_DIR/CLAUDE.md" ]]; then
   fi
 else
   log "Top-level CLAUDE.md already exists, skipping (delete it to fetch the default again)"
+fi
+
+if [[ ! -f "$PROJECTS_DIR/MEMORY.md" ]]; then
+  log "Downloading workspace MEMORY.md from $MEMORY_MD_URL"
+  if ! curl -fsSL "$MEMORY_MD_URL" -o "$PROJECTS_DIR/MEMORY.md"; then
+    warn "Failed to download MEMORY.md template — you can add one manually later at $PROJECTS_DIR/MEMORY.md"
+    rm -f "$PROJECTS_DIR/MEMORY.md"
+  fi
+else
+  log "Top-level MEMORY.md already exists, skipping (preserves your saved memory)"
 fi
 
 # ---------- 12. kappmaker config init (interactive) ----------
