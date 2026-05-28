@@ -1,0 +1,58 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/loop-guard.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Edit",
+      "Write",
+      "Bash(./gradlew *)",
+      "Bash(*/gradlew *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git log*)",
+      "Bash(git stash*)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git rev-parse*)",
+      "Bash(./scripts/loop-guard.sh)",
+      "Bash(./scripts/start-loop.sh*)",
+      "Bash(./scripts/stop-loop.sh)"
+    ],
+    "deny": [
+      "Read(./MobileApp/local.properties)",
+      "Edit(./MobileApp/local.properties)",
+      "Read(./MobileApp/androidApp/google-services.json)",
+      "Edit(./MobileApp/androidApp/google-services.json)",
+      "Read(./MobileApp/iosApp/**/GoogleService-Info.plist)",
+      "Edit(./MobileApp/iosApp/**/GoogleService-Info.plist)",
+      "Read(./MobileApp/distribution/android/keystore/**)",
+      "Edit(./MobileApp/distribution/android/keystore/**)",
+      "Read(./MobileApp/distribution/**/*.p8)",
+      "Edit(./MobileApp/distribution/**/*.p8)",
+      "Read(./MobileApp/distribution/**/*publisher*.json)",
+      "Edit(./MobileApp/distribution/**/*publisher*.json)",
+      "Edit(./MobileApp/iosApp/Pods/**)",
+      "Edit(./**/build/**)",
+      "Edit(./**/.gradle/**)",
+      "Edit(./**/.idea/**)",
+      "Edit(./.github/workflows/**)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -fd*)"
+    ]
+  }
+}

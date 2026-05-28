@@ -36,6 +36,7 @@ The script is idempotent — re-running it skips anything already installed.
 | GitHub CLI (`gh`) | latest | Push generated app repos to GitHub |
 | `cloudflared` | latest | Cloudflare quick tunnels for web (Wasm/JS) preview URLs |
 | `preview` / `preview-stop` | bundled | Helper scripts in `~/bin` that wrap `cloudflared` for one-command preview links |
+| `kapp-loop-install` + loop template | bundled | Per-app self-improving dev loop scaffold (opt-in, **off by default**) — see [Self-improving dev loop](#self-improving-dev-loop) |
 
 Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `BUN_INSTALL`, `PATH`) are persisted to `~/.bashrc` in a marked block.
 
@@ -194,6 +195,95 @@ Once paired, message your bot. The `kappmaker` skill auto-loads when your prompt
 - `Remember: use MIT license by default`
 - `What do you remember?` — Claude shows the contents of `~/projects/MEMORY.md`
 - `Forget the MIT license preference`
+
+## Self-improving dev loop
+
+An **opt-in** autonomous loop that improves an app one small, verified change at a time. It plans the
+work, implements the top item, spins up specialist sub-agents to critique the change, applies the
+worthwhile suggestions, runs a real Gradle gate, and only then checks the item off — repeating until
+the plan is done or you say stop. Its default goal is **conversion** (free→paid subscriptions +
+credit-pack purchases), reviewed ethically (it refuses dark patterns).
+
+It is **not** installed in apps automatically and **never runs until you trigger it** with a plain
+message — the same whether you're in the terminal or on Telegram. There are no slash commands.
+
+### 1. Install it into an app (once)
+
+```bash
+cd ~/projects/<app>
+kapp-loop-install
+```
+
+This drops the scaffold into the app: workflow guide in `AiGuidelines/loop/`, specialist sub-agents
+in `.claude/agents/`, helper scripts in `scripts/`, a gated Stop hook in `.claude/settings.json`,
+and a run-output dir `.loop/`. It also appends a short rules block to the app's `CLAUDE.md`. Your
+existing config is never clobbered (if `.claude/settings.json` already exists it writes
+`settings.loop.json` for you to merge).
+
+> On the VPS the template is pre-deployed to `~/projects/.loop-template/` by `setup-vps.sh`, so
+> `kapp-loop-install` just works. Nothing changes about a normal session until you start the loop.
+
+### 2. Start it — plain language
+
+Just describe the goal and tell it to keep going. Examples (terminal or Telegram):
+
+- *"improve the onboarding conversion and keep going until it's done"*
+- *"start the self-improve loop on the paywall"*
+- *"run the dev loop — focus on the credit-pack purchase flow"*
+- *"work on first-run activation autonomously until the plan is complete"*
+
+On start it takes a git checkpoint, seeds `PLAN.md` from the goal, raises the loop flag, and begins
+the first item.
+
+### 3. Stop it — plain language
+
+- *"stop"* · *"pause the loop"* · *"that's enough for now"*
+
+The loop also stops automatically when the plan is complete, when a build/test fails (it never
+checks a box on a red build), or when it hits the iteration cap (25 by default).
+
+### What you get back
+
+- `PLAN.md` — the living checklist (✅ done / ☐ remaining), grouped by milestone.
+- `.loop/decisions.md` — why each specialist suggestion was accepted or rejected.
+- `.loop/reviews/` — each specialist's structured critique per iteration.
+- `.loop/reports/run-<timestamp>.md` — a final report when the run finishes. If you started the loop
+  from Telegram, it also sends you a concise summary message.
+
+### The specialists
+
+Each reviews against the app's own `AiGuidelines/` and recommends only — code is written by the
+orchestrator alone:
+
+| Sub-agent | Focus |
+|---|---|
+| `orchestrator` | Owns `PLAN.md`, delegates, decides what to apply, enforces the gate |
+| `onboarding-specialist` | First-run activation, time-to-value, signup/permission friction |
+| `paywall-conversion-specialist` | Subscription + credit-pack conversion, trial framing, pricing (ethical) |
+| `ui-ux-reviewer` | Compose UI: tap targets, accessibility, dark mode, snapshot impact |
+| `qa-engineer` | Kotlin/coroutine correctness, edge cases, missing tests, build safety |
+
+### Example session (from Telegram)
+
+```
+You:  switch to fittracker
+Bot:  Switched to fittracker.
+
+You:  install the self-improve loop here
+Bot:  Done — loop installed, off by default.
+
+You:  improve the onboarding conversion and keep going until it's done
+Bot:  ⏳ Loop started. Seeded PLAN.md (3 milestones, 11 items). Working item 1…
+      …(iterates: implement → review → verify → check off)…
+Bot:  done — completed 11/11 items. Report: .loop/reports/run-2026-05-29T1430.md
+      Highlights: chose OnBoarding variation 2, moved paywall after first value moment,
+      fixed 2 a11y issues. All gates green.
+
+You:  stop
+Bot:  Loop stopped. Committed work is preserved.
+```
+
+The full workflow rules live in each app at `AiGuidelines/loop/SELF_IMPROVE_LOOP.md`.
 
 ## Limitations
 

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# kapp-loop-install — install the self-improving dev loop scaffold into a KAppMaker app.
+#
+# Copies the loop template (AiGuidelines/loop/, .loop/, scripts/, .claude/agents/), merges the loop
+# rules block into the app's CLAUDE.md, and installs .claude/settings.json (or, if one already
+# exists, writes settings.loop.json next to it for manual merge — never clobbers your config).
+#
+# The loop is OFF by default after install: it only runs once a human triggers it (see CLAUDE.md).
+#
+# Usage:
+#   kapp-loop-install [app-dir]      # default: current directory
+#
+# Template source resolution (first that exists):
+#   $KAPP_LOOP_TEMPLATE  ->  ~/projects/.loop-template  ->  <dir-of-this-script>/../loop
+
+set -euo pipefail
+
+APP_DIR="${1:-$(pwd)}"
+APP_DIR="$(cd "$APP_DIR" && pwd)"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+
+TEMPLATE=""
+for cand in "${KAPP_LOOP_TEMPLATE:-}" "$HOME/projects/.loop-template" "$SCRIPT_DIR/../loop"; do
+  [ -n "$cand" ] || continue
+  if [ -d "$cand" ] && [ -f "$cand/CLAUDE.loop.md" ]; then
+    TEMPLATE="$(cd "$cand" && pwd)"
+    break
+  fi
+done
+[ -n "$TEMPLATE" ] || { echo "kapp-loop-install: loop template not found (set \$KAPP_LOOP_TEMPLATE)" >&2; exit 1; }
+
+echo "Installing self-improve loop"
+echo "  template: $TEMPLATE"
+echo "  app:      $APP_DIR"
+
+# --- static guidance -> AiGuidelines/loop/ (matches the boilerplate's convention) ---
+mkdir -p "$APP_DIR/AiGuidelines/loop"
+cp "$TEMPLATE/AiGuidelines/loop/SELF_IMPROVE_LOOP.md" "$APP_DIR/AiGuidelines/loop/SELF_IMPROVE_LOOP.md"
+cp "$TEMPLATE/AiGuidelines/loop/PLAN.template.md" "$APP_DIR/AiGuidelines/loop/PLAN.template.md"
+
+# --- runtime working data -> .loop/ (generated logs/output, kept out of AiGuidelines) ---
+mkdir -p "$APP_DIR/.loop/reviews" "$APP_DIR/.loop/reports"
+[ -f "$APP_DIR/.loop/decisions.md" ] || cp "$TEMPLATE/.loop/decisions.md" "$APP_DIR/.loop/decisions.md"
+touch "$APP_DIR/.loop/reviews/.gitkeep" "$APP_DIR/.loop/reports/.gitkeep"
+
+# --- Claude Code subagents + scripts ---
+mkdir -p "$APP_DIR/.claude/agents" "$APP_DIR/scripts"
+cp "$TEMPLATE"/.claude/agents/*.md "$APP_DIR/.claude/agents/"
+cp "$TEMPLATE"/scripts/*.sh "$APP_DIR/scripts/"
+chmod +x "$APP_DIR"/scripts/*.sh
+
+# --- merge the loop block into CLAUDE.md (idempotent via markers) ---
+BLOCK_START="<!-- KAPPMAKER-SELF-IMPROVE-LOOP:START -->"
+CLAUDE_MD="$APP_DIR/CLAUDE.md"
+if [ -f "$CLAUDE_MD" ] && grep -qF "$BLOCK_START" "$CLAUDE_MD"; then
+  echo "  CLAUDE.md: loop block already present — skipping merge."
+else
+  {
+    [ -f "$CLAUDE_MD" ] && echo ""
+    cat "$TEMPLATE/CLAUDE.loop.md"
+  } >> "$CLAUDE_MD"
+  echo "  CLAUDE.md: appended loop rules block."
+fi
+
+# --- settings.json: install or stage for manual merge (never clobber) ---
+SETTINGS="$APP_DIR/.claude/settings.json"
+if [ -f "$SETTINGS" ]; then
+  cp "$TEMPLATE/.claude/settings.json" "$APP_DIR/.claude/settings.loop.json"
+  echo "  .claude/settings.json exists — wrote settings.loop.json instead."
+  echo "  ACTION NEEDED: merge its hooks.Stop and permissions into your settings.json."
+else
+  cp "$TEMPLATE/.claude/settings.json" "$SETTINGS"
+  echo "  .claude/settings.json: installed (gated Stop hook + permissions)."
+fi
+
+echo ""
+echo "Done. The loop is OFF by default."
+echo "To start it, just message (terminal or Telegram), e.g.:"
+echo "    \"improve the onboarding conversion and keep going until it's done\""
+echo "To stop it:  \"stop the loop\""

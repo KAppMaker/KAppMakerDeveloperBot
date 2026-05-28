@@ -144,6 +144,34 @@ for script in preview preview-stop; do
   fi
 done
 
+# ---------- 9d. self-improve loop template + installer ----------
+# The loop is an OPT-IN scaffold: deployed here, installed per-app with `kapp-loop-install`,
+# and OFF until a human triggers it. We fetch the repo tarball and extract the two pieces.
+LOOP_REPO="${LOOP_REPO:-KAppMaker/KAppMakerDeveloperBot}"
+LOOP_REF="${LOOP_REF:-main}"
+LOOP_TEMPLATE_DIR="$HOME/projects/.loop-template"
+log "Installing self-improve loop template to $LOOP_TEMPLATE_DIR"
+mkdir -p "$HOME/projects" "$HOME/bin"
+TMP_TGZ="$(mktemp --suffix=.tgz)"
+TMP_EXTRACT="$(mktemp -d)"
+if curl -fsSL "https://github.com/${LOOP_REPO}/archive/refs/heads/${LOOP_REF}.tar.gz" -o "$TMP_TGZ" \
+   && tar -xzf "$TMP_TGZ" -C "$TMP_EXTRACT"; then
+  SRC_ROOT="$(find "$TMP_EXTRACT" -maxdepth 1 -type d -name '*KAppMakerDeveloperBot*' | head -1)"
+  if [[ -n "$SRC_ROOT" && -d "$SRC_ROOT/templates/loop" ]]; then
+    rm -rf "$LOOP_TEMPLATE_DIR"
+    cp -R "$SRC_ROOT/templates/loop" "$LOOP_TEMPLATE_DIR"
+    chmod +x "$LOOP_TEMPLATE_DIR"/scripts/*.sh 2>/dev/null || true
+    cp "$SRC_ROOT/templates/bin/kapp-loop-install" "$HOME/bin/kapp-loop-install"
+    chmod +x "$HOME/bin/kapp-loop-install"
+    log "Loop template + 'kapp-loop-install' installed (loop stays OFF until triggered)"
+  else
+    warn "Loop template not found in tarball — skipping. Fetch manually from $LOOP_REPO later."
+  fi
+else
+  warn "Failed to download loop template tarball — skipping. Re-run later or fetch manually."
+fi
+rm -rf "$TMP_TGZ" "$TMP_EXTRACT"
+
 # ---------- 10. persist env vars ----------
 log "Persisting env vars to ~/.bashrc"
 BLOCK_MARK="# --- KAppMaker VPS env (managed by setup-vps.sh) ---"
@@ -241,6 +269,12 @@ NEXT STEPS (interactive — cannot be scripted)
 
 7. Optional: log into GitHub CLI for app repo pushes:
      gh auth login
+
+8. Optional: enable the self-improving dev loop on an app (OFF by default):
+     cd ~/projects/<app> && kapp-loop-install
+   Then just message (terminal or Telegram) to start, e.g.
+     "improve the onboarding conversion and keep going until it's done"
+   and "stop the loop" to end. No slash commands.
 
 ────────────────────────────────────────────────────────────
 Reminder: iOS builds need macOS/Xcode, so .ipa builds won't work

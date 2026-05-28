@@ -151,6 +151,27 @@ Rules:
 - Don't attach intermediate / working files unless the user asks.
 - The VPS does NOT need to be publicly reachable for this — uploads go directly from VPS → Telegram servers via outbound HTTPS.
 
+## Self-improving dev loop (opt-in, OFF by default)
+
+Each app can run an autonomous, self-reviewing improvement loop: it plans work, implements one item
+at a time, has specialist sub-agents critique each change, gates every check-off behind a real
+Gradle verification, and reports when done. It targets **conversion** (free→paid subscriptions +
+credit-pack purchases) by default. It is **not** installed in apps automatically and **never runs
+until a human triggers it.**
+
+- **Install into an app** (once): `cd ~/projects/<app> && kapp-loop-install`. This copies the loop
+  scaffold (agents, scripts, docs, `PLAN.template.md`), merges a rules block into the app's
+  `CLAUDE.md`, and installs a gated Stop hook. The template lives at `~/projects/.loop-template/`
+  (deployed by `setup-vps.sh`).
+- **Start it** — plain language, no slash command: *"improve the onboarding conversion and keep
+  going until it's done"*, *"start the self-improve loop on the paywall"*, *"run the dev loop"*.
+  This seeds `PLAN.md`, takes a git checkpoint, and raises the loop flag.
+- **Stop it** — *"stop"*, *"pause the loop"*, *"that's enough for now"*. The iteration cap (25) and a
+  red build also end it automatically.
+- **Off by default**: the Stop hook is inert unless the flag file `.claude/.loop-active` exists, so
+  normal sessions are unaffected. Full workflow lives in the app's
+  `AiGuidelines/loop/SELF_IMPROVE_LOOP.md`; run logs/reviews/reports land in `.loop/`.
+
 ## Safety
 
 ### Confirmations required (always ask first)
