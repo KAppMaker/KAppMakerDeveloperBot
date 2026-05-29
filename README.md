@@ -58,23 +58,23 @@ The script prints these steps when it finishes; they can't be automated.
 Don't run the bot as `root`: it's a security risk, and Claude Code **refuses `--dangerously-skip-permissions` when running as root** — and you'll want that flag for hands-off Telegram / loop operation (see step 6). Create a normal user with sudo and do everything below as that user:
 
 ```bash
-sudo adduser kapp && sudo usermod -aG sudo kapp
-su - kapp
+sudo adduser devuser && sudo usermod -aG sudo devuser
+su - devuser
 ```
 
-Each user has its own env: if you ran the bootstrap as `root`, just **re-run it as `kapp`** (it's idempotent and will set up this user's `~/.bashrc` env block, SDK paths, and tools), or copy the `# --- KAppMaker VPS env ---` block from root's `~/.bashrc` into `kapp`'s and `source ~/.bashrc`.
+Each user has its own env: if you ran the bootstrap as `root`, just **re-run it as `devuser`** (it's idempotent and will set up this user's `~/.bashrc` env block, SDK paths, and tools), or copy the `# --- KAppMaker VPS env ---` block from root's `~/.bashrc` into `devuser`'s and `source ~/.bashrc`.
 
 #### Log in with an SSH key (do this before disabling passwords)
 
 The login password prompt is brute-forceable — switch this user to SSH **key** auth. From **your laptop**, push your public key:
 
 ```bash
-ssh-copy-id kapp@<server-ip>
+ssh-copy-id devuser@<server-ip>
 # no ssh-copy-id? →
-# cat ~/.ssh/id_ed25519.pub | ssh kapp@<server-ip> 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'
+# cat ~/.ssh/id_ed25519.pub | ssh devuser@<server-ip> 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'
 ```
 
-Verify you can `ssh kapp@<server-ip>` **without** a password. Only then, turn off password + root login globally:
+Verify you can `ssh devuser@<server-ip>` **without** a password. Only then, turn off password + root login globally:
 
 ```bash
 sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
@@ -89,8 +89,8 @@ sudo sshd -t && sudo systemctl restart ssh    # sshd -t must pass first
 For unattended operation you may not want `sudo` to prompt for a password. Add a validated drop-in (never edit `/etc/sudoers` directly):
 
 ```bash
-echo "kapp ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/kapp
-sudo chmod 440 /etc/sudoers.d/kapp
+echo "devuser ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/devuser
+sudo chmod 440 /etc/sudoers.d/devuser
 sudo visudo -c        # must print "parsed OK"
 ```
 
@@ -174,7 +174,7 @@ The model (battle-tested by folks running real apps on their own infra):
 | ✅ | Hardening | Why |
 |---|---|---|
 | ☐ | SSH **key-only** auth (`PasswordAuthentication no`) | Kills password brute-force |
-| ☐ | **Root login off** (`PermitRootLogin no`) + a sudo user (the `kapp` user above) | No direct root attack surface |
+| ☐ | **Root login off** (`PermitRootLogin no`) + a sudo user (the `devuser` user above) | No direct root attack surface |
 | ☐ | **UFW** on, default-deny inbound | Closed by default, open by exception |
 | ☐ | **SSH locked to Tailscale** | Public `:22` is never exposed |
 | ☐ | **Docker ports bound to `127.0.0.1`** | Docker bypasses UFW via iptables — bind explicitly |
