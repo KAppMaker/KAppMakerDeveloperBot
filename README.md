@@ -2,6 +2,18 @@
 
 Bootstrap a VPS to run [Claude Code](https://claude.com/claude-code) with the [Telegram plugin](https://github.com/anthropics/claude-code) and the [KAppMaker CLI](https://github.com/KAppMaker/KAppMaker-CLI) skill. Once set up, you can drive your KAppMaker workflows (create apps, generate logos, configure stores, build & publish Android releases) from Telegram on your phone.
 
+## Contents
+
+1. [Quick start](#quick-start) — one-command bootstrap of a fresh VPS
+2. [Securing the VPS](#securing-the-vps-do-this-first) — **do this first**: Tailscale, UFW, SSH lockdown
+3. [What gets installed](#what-gets-installed) — the toolchain the script sets up
+4. [Post-install](#post-install-interactive--do-these-on-the-vps) — non-root user, login to Claude, plugins, Telegram
+5. [GitHub authentication](#github-authentication-recommended) — dedicated bot account & SSH key
+6. [Web previews](#web-previews-wasm--js-builds) — public URLs for Wasm/JS builds
+7. [Using it from Telegram](#using-it-from-telegram) — example commands & memory
+8. [Self-improving dev loop](#self-improving-dev-loop) — opt-in autonomous improvement loop
+9. [Limitations](#limitations) · [Architecture](#architecture) · [Troubleshooting](#troubleshooting)
+
 ## Quick start
 
 On a fresh Ubuntu/Debian VPS:
@@ -24,7 +36,7 @@ The script is idempotent — re-running it skips anything already installed.
 
 A VPS is a computer wired directly to the entire internet — ~8 billion people can knock on its door and try to get in. Treat it that way. **You want it reachable only by you** (and, if you host a public site, only by Cloudflare in front of it). This matters even more here because you may run Claude with `--dangerously-skip-permissions` for hands-off Telegram/loop use — so the box itself must be locked down to just you.
 
-The model (battle-tested by folks running real apps on their own infra):
+The model (battle-tested by folks running real apps on their own infra — see [@levelsio's VPS-lockdown tweet](https://x.com/levelsio/status/2033546675063554213)):
 
 - **SSH only over [Tailscale](https://tailscale.com)** — put the server on a private mesh network and make that the *only* way in. No public SSH surface to brute-force.
 - **Default-deny firewall (UFW)** — block all inbound, then open only what you truly need.
