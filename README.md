@@ -53,6 +53,13 @@ The script prints these steps when it finishes; they can't be automated.
 
 > Note: the bootstrap script runs `kappmaker config init` interactively at the end. If for any reason it was skipped (e.g. no TTY), run it manually before doing anything else: `kappmaker config init`. Docs: <https://cli.kappmaker.com/>.
 
+> **Run as a non-root user.** Don't run the bot as `root`: it's a security risk, and Claude Code **refuses `--dangerously-skip-permissions` when running as root** — and you'll want that flag for hands-off Telegram / loop operation (see step 6). Create a normal user with sudo and do everything below as that user:
+> ```bash
+> sudo adduser kapp && sudo usermod -aG sudo kapp
+> su - kapp
+> ```
+> Each user has its own env: if you ran the bootstrap as `root`, just **re-run it as `kapp`** (it's idempotent and will set up this user's `~/.bashrc` env block, SDK paths, and tools), or copy the `# --- KAppMaker VPS env ---` block from root's `~/.bashrc` into `kapp`'s and `source ~/.bashrc`.
+
 1. **Reload shell**
    ```bash
    source ~/.bashrc
@@ -66,23 +73,34 @@ The script prints these steps when it finishes; they can't be automated.
    Open the printed URL in your laptop browser, paste the auth code back. Always start Claude from `~/projects` so the workspace CLAUDE.md is loaded.
 
 3. **Install plugins** (inside Claude)
+
+   **KAppMaker skill** — natural-language access to the `kappmaker` CLI ([guide](https://cli.kappmaker.com/guides/claude-code-skill)):
    ```
    /plugin marketplace add KAppMaker/KAppMaker-CLI
    /plugin install kappmaker@KAppMaker-CLI
-   /plugin marketplace add anthropics/claude-code
-   /plugin install telegram@anthropic
+   ```
+   > Alternatively, outside Claude: `npx skills add KAppMaker/KAppMaker-CLI --skill kappmaker`
+
+   **Telegram channel plugin** ([official README](https://github.com/anthropics/claude-plugins-official/blob/main/external_plugins/telegram/README.md)):
+   ```
+   /plugin install telegram@claude-plugins-official
+   /reload-plugins
    ```
 
-4. **Configure Telegram** with your BotFather token
+4. **Configure Telegram** — pass your BotFather token inline
    ```
-   /telegram:configure
+   /telegram:configure 123456789:AAHfiqksKZ8...
    ```
+   This writes `TELEGRAM_BOT_TOKEN=...` to `~/.claude/channels/telegram/.env`.
 
-5. **Pair your Telegram account**
+5. **Pair your Telegram account.** DM your bot on Telegram — it replies with a **6-character pairing code**. Back in the Claude session:
    ```
-   /telegram:access
+   /telegram:access pair <code>
    ```
-   Send `/start` to your bot from Telegram, then approve the pairing in the terminal.
+   Then lock it down so only you can reach the bot:
+   ```
+   /telegram:access policy allowlist
+   ```
 
 6. **Run inside tmux with the Telegram channel active** so Claude listens for your bot messages and survives SSH disconnect
    ```bash
@@ -93,11 +111,73 @@ The script prints these steps when it finishes; they can't be automated.
 
    > **Important:** plain `claude` (without `--channels`) starts a normal interactive session and does **not** listen on Telegram. The `--channels` flag is what opens the listener.
 
+   **Hands-off mode (no permission prompts).** For unattended Telegram use — and for the [self-improving dev loop](#self-improving-dev-loop) to run without stopping to ask — add `--dangerously-skip-permissions` so Claude runs tools without prompting:
+   ```bash
+   cd ~/projects && claude --channels plugin:telegram@claude-plugins-official --dangerously-skip-permissions
+   ```
+   > This flag **only works as a non-root user** (see the note above). It removes the per-action approval prompts, so only use it on a VPS you control. The loop scaffold's `no-touch` deny-list (secrets, keystores, `**/build/**`, CI workflows) is still a guardrail, but treat skip-permissions as full trust in the agent.
+
 7. **Log into GitHub CLI** for app repo pushes
    ```bash
    gh auth login
    ```
    Use the dedicated bot account from the *GitHub authentication* section below — **don't use your personal account on the VPS**.
+
+## Securing the VPS (do this first)
+
+A VPS is a computer wired directly to the entire internet — ~8 billion people can knock on its door and try to get in. Treat it that way. **You want it reachable only by you** (and, if you host a public site, only by Cloudflare in front of it). This matters even more here because you may run Claude with `--dangerously-skip-permissions` for hands-off Telegram/loop use — so the box itself must be locked down to just you.
+
+The model (battle-tested by folks running real apps on their own infra):
+
+- **SSH only over [Tailscale](https://tailscale.com)** — put the server on a private mesh network and make that the *only* way in. No public SSH surface to brute-force.
+- **Default-deny firewall (UFW)** — block all inbound, then open only what you truly need.
+- **Cloudflare in front of any public web** — if (and only if) you serve a website, allow inbound `443` *from Cloudflare IPs only*, never from the open internet. (The bundled `preview` helper uses **outbound** Cloudflare quick tunnels, so it needs **no** inbound web rule.)
+
+### Non-negotiables checklist
+
+| ✅ | Hardening | Why |
+|---|---|---|
+| ☐ | SSH **key-only** auth (`PasswordAuthentication no`) | Kills password brute-force |
+| ☐ | **Root login off** (`PermitRootLogin no`) + a sudo user (the `kapp` user above) | No direct root attack surface |
+| ☐ | **UFW** on, default-deny inbound | Closed by default, open by exception |
+| ☐ | **SSH locked to Tailscale** | Public `:22` is never exposed |
+| ☐ | **Docker ports bound to `127.0.0.1`** | Docker bypasses UFW via iptables — bind explicitly |
+| ☐ | **Unattended security upgrades** | Auto-patch known CVEs |
+| ☐ | **fail2ban** | Bans repeat offenders |
+| ☐ | **Tested backups** | A backup you've never restored is a wish, not a backup |
+
+### Quick start
+
+1. **Install Tailscale and join your tailnet** (do this *before* touching the firewall, so you don't lock yourself out):
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
+   ```
+   Confirm you can SSH in over the Tailscale IP (`100.x.y.z`) from your laptop.
+
+2. **Lock the firewall to Tailscale-only SSH:**
+   ```bash
+   sudo ufw default deny incoming
+   sudo ufw default allow outgoing
+   sudo ufw allow in on tailscale0 to any port 22 proto tcp   # SSH only over Tailscale
+   sudo ufw enable
+   ```
+   > ⚠️ Keep your provider's web console / rescue session open until you've confirmed Tailscale SSH works — otherwise a bad rule can lock you out. Only after that, remove any public `allow 22` rule.
+
+3. **(Only if hosting a public website) allow `443` from Cloudflare IPs only:**
+   ```bash
+   for ip in $(curl -s https://www.cloudflare.com/ips-v4); do sudo ufw allow from "$ip" to any port 443 proto tcp; done
+   for ip in $(curl -s https://www.cloudflare.com/ips-v6); do sudo ufw allow from "$ip" to any port 443 proto tcp; done
+   ```
+   Point your domain through Cloudflare (orange-cloud / proxied) so Cloudflare stands in front and absorbs attacks. **Never** open `443`/`80` to `0.0.0.0/0`.
+
+### Let Claude harden it for you
+
+There's a community Claude Code skill that does all of the above interactively — SSH lockdown, UFW, Tailscale, fail2ban, unattended-upgrades, Docker port binding, and backup guidance — in a few minutes:
+
+> **Hardening skill:** <https://gist.github.com/burakeregar/5b8a7bca382ae43342db30f3c04788fc>
+>
+> Save it to `~/.claude/commands/vps-setup.md` on the VPS, then ask Claude (e.g. *"run the full VPS setup"* / *"harden ssh"*) and it walks you through the rest. Review what it changes before applying — you're handing it root.
 
 ## GitHub authentication (recommended)
 

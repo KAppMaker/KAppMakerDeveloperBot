@@ -233,6 +233,12 @@ cat <<'NEXT'
 NEXT STEPS (interactive — cannot be scripted)
 ────────────────────────────────────────────────────────────
 
+0. SECURE THE VPS FIRST. Don't leave SSH open to the world, and don't run
+   the bot as root. Put SSH behind Tailscale, default-deny with UFW, and run
+   Claude as a non-root sudo user (required for --dangerously-skip-permissions).
+   See the "Securing the VPS" section of the README for the checklist + a
+   community hardening skill that does it interactively.
+
 1. Reload your shell so env vars take effect:
      source ~/.bashrc
 
@@ -246,17 +252,22 @@ NEXT STEPS (interactive — cannot be scripted)
    Always start Claude from ~/projects so the workspace CLAUDE.md is loaded.
 
 3. Inside Claude, install the plugins:
+   KAppMaker skill (guide: https://cli.kappmaker.com/guides/claude-code-skill):
      /plugin marketplace add KAppMaker/KAppMaker-CLI
      /plugin install kappmaker@KAppMaker-CLI
-     /plugin marketplace add anthropics/claude-code
-     /plugin install telegram@anthropic
+   Telegram channel plugin:
+     /plugin install telegram@claude-plugins-official
+     /reload-plugins
 
-4. Configure Telegram with your bot token:
-     /telegram:configure
+4. Configure Telegram — pass your BotFather token inline:
+     /telegram:configure 123456789:AAHfiqksKZ8...
+   (writes TELEGRAM_BOT_TOKEN=... to ~/.claude/channels/telegram/.env)
 
 5. Pair your Telegram account:
-     /telegram:access
-   Then send /start to your bot in Telegram and approve the pairing.
+   DM your bot in Telegram — it replies with a 6-character code. Then:
+     /telegram:access pair <code>
+   Lock it down so only you can reach the bot:
+     /telegram:access policy allowlist
 
 6. Run Claude inside tmux WITH the Telegram channel active
    (so messages from your bot are received):
