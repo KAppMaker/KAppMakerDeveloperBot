@@ -20,6 +20,62 @@ bash setup-vps.sh
 
 The script is idempotent — re-running it skips anything already installed.
 
+## Securing the VPS (do this first)
+
+A VPS is a computer wired directly to the entire internet — ~8 billion people can knock on its door and try to get in. Treat it that way. **You want it reachable only by you** (and, if you host a public site, only by Cloudflare in front of it). This matters even more here because you may run Claude with `--dangerously-skip-permissions` for hands-off Telegram/loop use — so the box itself must be locked down to just you.
+
+The model (battle-tested by folks running real apps on their own infra):
+
+- **SSH only over [Tailscale](https://tailscale.com)** — put the server on a private mesh network and make that the *only* way in. No public SSH surface to brute-force.
+- **Default-deny firewall (UFW)** — block all inbound, then open only what you truly need.
+- **Cloudflare in front of any public web** — if (and only if) you serve a website, allow inbound `443` *from Cloudflare IPs only*, never from the open internet. (The bundled `preview` helper uses **outbound** Cloudflare quick tunnels, so it needs **no** inbound web rule.)
+
+### Non-negotiables checklist
+
+| ✅ | Hardening | Why |
+|---|---|---|
+| ☐ | SSH **key-only** auth (`PasswordAuthentication no`) | Kills password brute-force |
+| ☐ | **Root login off** (`PermitRootLogin no`) + a non-root sudo user (see Post-install) | No direct root attack surface |
+| ☐ | **UFW** on, default-deny inbound | Closed by default, open by exception |
+| ☐ | **SSH locked to Tailscale** | Public `:22` is never exposed |
+| ☐ | **Docker ports bound to `127.0.0.1`** | Docker bypasses UFW via iptables — bind explicitly |
+| ☐ | **Unattended security upgrades** | Auto-patch known CVEs |
+| ☐ | **fail2ban** | Bans repeat offenders |
+| ☐ | **Tested backups** | A backup you've never restored is a wish, not a backup |
+
+### Hardening quick start
+
+1. **Install Tailscale and join your tailnet** (do this *before* touching the firewall, so you don't lock yourself out):
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
+   ```
+   Confirm you can SSH in over the Tailscale IP (`100.x.y.z`) from your laptop.
+
+2. **Lock the firewall to Tailscale-only SSH:**
+   ```bash
+   sudo ufw default deny incoming
+   sudo ufw default allow outgoing
+   sudo ufw allow in on tailscale0 to any port 22 proto tcp   # SSH only over Tailscale
+   sudo ufw enable
+   ```
+   > ⚠️ Keep your provider's web console / rescue session open until you've confirmed Tailscale SSH works — otherwise a bad rule can lock you out. Only after that, remove any public `allow 22` rule.
+
+3. **(Only if hosting a public website) allow `443` from Cloudflare IPs only:**
+   ```bash
+   for ip in $(curl -s https://www.cloudflare.com/ips-v4); do sudo ufw allow from "$ip" to any port 443 proto tcp; done
+   for ip in $(curl -s https://www.cloudflare.com/ips-v6); do sudo ufw allow from "$ip" to any port 443 proto tcp; done
+   ```
+   Point your domain through Cloudflare (orange-cloud / proxied) so Cloudflare stands in front and absorbs attacks. **Never** open `443`/`80` to `0.0.0.0/0`.
+
+### Let Claude harden it for you
+
+There's a community Claude Code skill that does all of the above interactively — SSH lockdown, UFW, Tailscale, fail2ban, unattended-upgrades, Docker port binding, and backup guidance — in a few minutes:
+
+> **Hardening skill:** <https://gist.github.com/burakeregar/5b8a7bca382ae43342db30f3c04788fc>
+>
+> Save it to `~/.claude/commands/vps-setup.md` on the VPS, then ask Claude (e.g. *"run the full VPS setup"* / *"harden ssh"*) and it walks you through the rest. Review what it changes before applying — you're handing it root.
+
 ## What gets installed
 
 | Component | Version | Purpose |
@@ -158,62 +214,6 @@ sudo visudo -c        # must print "parsed OK"
    gh auth login
    ```
    Use the dedicated bot account from the *GitHub authentication* section below — **don't use your personal account on the VPS**.
-
-## Securing the VPS (do this first)
-
-A VPS is a computer wired directly to the entire internet — ~8 billion people can knock on its door and try to get in. Treat it that way. **You want it reachable only by you** (and, if you host a public site, only by Cloudflare in front of it). This matters even more here because you may run Claude with `--dangerously-skip-permissions` for hands-off Telegram/loop use — so the box itself must be locked down to just you.
-
-The model (battle-tested by folks running real apps on their own infra):
-
-- **SSH only over [Tailscale](https://tailscale.com)** — put the server on a private mesh network and make that the *only* way in. No public SSH surface to brute-force.
-- **Default-deny firewall (UFW)** — block all inbound, then open only what you truly need.
-- **Cloudflare in front of any public web** — if (and only if) you serve a website, allow inbound `443` *from Cloudflare IPs only*, never from the open internet. (The bundled `preview` helper uses **outbound** Cloudflare quick tunnels, so it needs **no** inbound web rule.)
-
-### Non-negotiables checklist
-
-| ✅ | Hardening | Why |
-|---|---|---|
-| ☐ | SSH **key-only** auth (`PasswordAuthentication no`) | Kills password brute-force |
-| ☐ | **Root login off** (`PermitRootLogin no`) + a sudo user (the `devuser` user above) | No direct root attack surface |
-| ☐ | **UFW** on, default-deny inbound | Closed by default, open by exception |
-| ☐ | **SSH locked to Tailscale** | Public `:22` is never exposed |
-| ☐ | **Docker ports bound to `127.0.0.1`** | Docker bypasses UFW via iptables — bind explicitly |
-| ☐ | **Unattended security upgrades** | Auto-patch known CVEs |
-| ☐ | **fail2ban** | Bans repeat offenders |
-| ☐ | **Tested backups** | A backup you've never restored is a wish, not a backup |
-
-### Quick start
-
-1. **Install Tailscale and join your tailnet** (do this *before* touching the firewall, so you don't lock yourself out):
-   ```bash
-   curl -fsSL https://tailscale.com/install.sh | sh
-   sudo tailscale up
-   ```
-   Confirm you can SSH in over the Tailscale IP (`100.x.y.z`) from your laptop.
-
-2. **Lock the firewall to Tailscale-only SSH:**
-   ```bash
-   sudo ufw default deny incoming
-   sudo ufw default allow outgoing
-   sudo ufw allow in on tailscale0 to any port 22 proto tcp   # SSH only over Tailscale
-   sudo ufw enable
-   ```
-   > ⚠️ Keep your provider's web console / rescue session open until you've confirmed Tailscale SSH works — otherwise a bad rule can lock you out. Only after that, remove any public `allow 22` rule.
-
-3. **(Only if hosting a public website) allow `443` from Cloudflare IPs only:**
-   ```bash
-   for ip in $(curl -s https://www.cloudflare.com/ips-v4); do sudo ufw allow from "$ip" to any port 443 proto tcp; done
-   for ip in $(curl -s https://www.cloudflare.com/ips-v6); do sudo ufw allow from "$ip" to any port 443 proto tcp; done
-   ```
-   Point your domain through Cloudflare (orange-cloud / proxied) so Cloudflare stands in front and absorbs attacks. **Never** open `443`/`80` to `0.0.0.0/0`.
-
-### Let Claude harden it for you
-
-There's a community Claude Code skill that does all of the above interactively — SSH lockdown, UFW, Tailscale, fail2ban, unattended-upgrades, Docker port binding, and backup guidance — in a few minutes:
-
-> **Hardening skill:** <https://gist.github.com/burakeregar/5b8a7bca382ae43342db30f3c04788fc>
->
-> Save it to `~/.claude/commands/vps-setup.md` on the VPS, then ask Claude (e.g. *"run the full VPS setup"* / *"harden ssh"*) and it walks you through the rest. Review what it changes before applying — you're handing it root.
 
 ## GitHub authentication (recommended)
 
