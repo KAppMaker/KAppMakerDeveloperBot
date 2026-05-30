@@ -144,6 +144,45 @@ for script in preview preview-stop; do
   fi
 done
 
+# ---------- 9c2. session-history hook (context recovery after a restart) ----------
+# The always-on Telegram bot restarts as a FRESH Claude after a crash/reboot, with
+# no memory of the prior conversation. This Stop hook saves the last few exchanges
+# to ~/.claude/session-history.md every turn so a restarted Claude can recover what
+# it was working on (it reads the file on demand — see the workspace CLAUDE.md).
+log "Installing session-history hook to ~/bin"
+if curl -fsSL "$PREVIEW_BASE_URL/claude-history.py" -o "$HOME/bin/claude-history.py"; then
+  chmod +x "$HOME/bin/claude-history.py"
+  # Register a user-level Stop hook idempotently (never clobbers existing settings).
+  mkdir -p "$HOME/.claude"
+  if python3 - "$HOME/.claude/settings.json" "python3 $HOME/bin/claude-history.py" <<'PY'
+import json, sys
+path, cmd = sys.argv[1], sys.argv[2]
+try:
+    with open(path) as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        data = {}
+except Exception:
+    data = {}
+stop = data.setdefault("hooks", {}).setdefault("Stop", [])
+present = any(h.get("command") == cmd for grp in stop for h in (grp.get("hooks") or []))
+if not present:
+    stop.append({"matcher": "", "hooks": [{"type": "command", "command": cmd}]})
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    print("registered")
+else:
+    print("already present")
+PY
+  then
+    log "Session-history Stop hook registered in ~/.claude/settings.json"
+  else
+    warn "Could not register session-history hook — add a Stop hook for 'python3 ~/bin/claude-history.py' to ~/.claude/settings.json manually."
+  fi
+else
+  warn "Failed to download claude-history.py — fetch manually later from $PREVIEW_BASE_URL/claude-history.py"
+fi
+
 # ---------- 9d. self-improve loop template + installer ----------
 # The loop is an OPT-IN scaffold: deployed here, installed per-app with `kapp-loop-install`,
 # and OFF until a human triggers it. We fetch the repo tarball and extract the two pieces.

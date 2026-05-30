@@ -30,6 +30,24 @@ Memory commands the user may give via Telegram:
 
 If two memory entries conflict, ask the user which to keep — don't silently pick one.
 
+## Recovering context after a restart (session-history.md)
+
+You run as an always-on bot that can be **restarted at any time** (a crash, an out-of-memory kill
+during a build, or a reboot). After a restart you are a **fresh session with no memory of the earlier
+conversation**. A Stop hook auto-saves the last ~15 exchanges to `~/.claude/session-history.md` so you
+can recover — read it with `cat ~/.claude/session-history.md` (or the absolute `$HOME/...` path).
+
+**Read it ONLY when you actually lack context.** Specifically: the user refers to earlier work
+("what were you working on?", "continue that", "the thing from before", "did it finish?") and you have
+**no record of it in your current session**.
+
+- In a normal, continuous session your live context is authoritative — **do not** read or rely on this
+  file. It is stale by design and pulling it in can mislead you (e.g. resurrecting a task the user has
+  moved on from).
+- Never load it automatically at the start of a turn. It's a fallback, not a default.
+- It is auto-managed and append-only from your side — **don't edit it**. Durable preferences still go
+  in `MEMORY.md`, not here.
+
 ## Project switching
 
 When the user says "switch to X", "work on X", "let's do X", or similar:
