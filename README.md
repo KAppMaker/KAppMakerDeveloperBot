@@ -12,7 +12,8 @@ Bootstrap a VPS to run [Claude Code](https://claude.com/claude-code) with the [T
 6. [Web previews](#web-previews-wasm--js-builds) — public URLs for Wasm/JS builds
 7. [Using it from Telegram](#using-it-from-telegram) — example commands & memory
 8. [Self-improving dev loop](#self-improving-dev-loop) — opt-in autonomous improvement loop
-9. [Limitations](#limitations) · [Architecture](#architecture) · [Troubleshooting](#troubleshooting)
+9. [Working with Claude Code effectively](#working-with-claude-code-effectively) — high-value habits & best practices
+10. [Limitations](#limitations) · [Architecture](#architecture) · [Troubleshooting](#troubleshooting)
 
 ## Quick start
 
@@ -335,6 +336,8 @@ credit-pack purchases), reviewed ethically (it refuses dark patterns).
 It is **not** installed in apps automatically and **never runs until you trigger it** with a plain
 message — the same whether you're in the terminal or on Telegram. There are no slash commands.
 
+> **This is our take on the [Ralph technique](https://github.com/anthropics/claude-code/tree/main/plugins/ralph-wiggum)** — the same engine Anthropic's `ralph-wiggum` plugin uses: a **Stop hook** that re-feeds the turn until the work is done. On top of that primitive we add a real Gradle verification gate (it never checks a box on a red build), a `PLAN.md` checklist as the completion signal (instead of ralph's exact-string `--completion-promise`), parallel specialist reviews, ethics guardrails, and **plain-language triggers that work over Telegram** (instead of `/ralph-loop`, which doesn't). So the "no slash commands" above is a deliberate divergence from ralph, not a gap.
+
 ### 1. Install it into an app (once)
 
 ```bash
@@ -412,6 +415,16 @@ Bot:  Loop stopped. Committed work is preserved.
 ```
 
 The full workflow rules live in each app at `AiGuidelines/loop/SELF_IMPROVE_LOOP.md`.
+
+## Working with Claude Code effectively
+
+A few high-value habits that make the bot (and the loop) produce better work. These are distilled from [shanraisshan/claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice) — see it for the full list.
+
+- **Plan before you build.** For anything non-trivial, ask it to plan first (research → plan → execute → review) instead of jumping straight to edits.
+- **Keep `CLAUDE.md` lean** (aim under ~200 lines). Push detail into the `AiGuidelines/` files — the loop and specialists already read those.
+- **Lean on specialist sub-agents.** Delegating review/research to focused agents keeps the main context clean and the answers sharper (the loop does this automatically).
+- **Verification is law, not vibes.** Trust the build/test gate over "looks done" — the loop never checks a box on a red build, and you should hold normal sessions to the same bar.
+- **Mind context hygiene.** Start a fresh session for an unrelated task rather than letting one thread sprawl.
 
 ## Limitations
 

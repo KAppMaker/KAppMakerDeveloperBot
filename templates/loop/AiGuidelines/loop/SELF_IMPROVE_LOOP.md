@@ -4,6 +4,11 @@ This is the full workflow for the autonomous, self-reviewing improvement loop. `
 is the lean rules block and imports this file. When the loop is active, **this document governs
 how you work**: how you plan, implement, review, verify, and decide when to stop.
 
+It implements the **Ralph technique** — a Stop hook that re-feeds the turn until the work is done
+(see `scripts/loop-guard.sh`). The KAppMaker layer on top is the verification gate, the `PLAN.md`
+checklist as completion signal, the specialist reviews, and the ethics rules below. See the project
+README's "Self-improving dev loop" section for the relationship to Anthropic's `ralph-wiggum` plugin.
+
 The loop is built for apps generated from the **KAppMaker** boilerplate:
 Kotlin Multiplatform + Compose Multiplatform (Android / iOS / Web / Desktop). The Gradle root is
 `MobileApp/` inside the app repo. Shared code lives under
