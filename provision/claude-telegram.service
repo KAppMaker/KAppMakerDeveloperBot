@@ -1,0 +1,27 @@
+# Always-on Claude Code + Telegram session for KAppMaker AI boxes.
+# Installed by provision/bootstrap.sh. The __DEVUSER__ placeholder is replaced
+# with the real non-root user at install time.
+#
+# This unit IS the "always-on" promise: start on boot, restart on crash, keep the
+# bot listening while the customer's laptop sleeps.
+
+[Unit]
+Description=KAppMaker AI — always-on Claude Code + Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__DEVUSER__
+WorkingDirectory=/home/__DEVUSER__/projects
+ExecStart=/home/__DEVUSER__/bin/claude-telegram-run.sh
+# Keep it alive: restart on crash AND while waiting for the customer to finish setup.
+Restart=always
+RestartSec=15
+# Survive transient failures without systemd giving up.
+StartLimitIntervalSec=0
+# Load the env block the bootstrap persisted (JAVA_HOME, ANDROID_SDK_ROOT, PATH, …).
+Environment=HOME=/home/__DEVUSER__
+
+[Install]
+WantedBy=multi-user.target
