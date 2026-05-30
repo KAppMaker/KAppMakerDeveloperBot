@@ -229,7 +229,7 @@ sudo visudo -c        # must print "parsed OK"
    ```
    By default this runs Claude inside an **attachable tmux session** managed by systemd — so you keep the live view you're used to **and** get auto-restart + start-on-boot:
    ```bash
-   tmux attach -t claudebot      # watch it work live; detach with Ctrl+B then D
+   tmux attach -t claude      # watch it work live; detach with Ctrl+B then D
    ```
    It **auto-restarts within ~15s** if Claude dies and **starts on boot**. Prefer no tmux at all? `kapp-service-install --headless` runs Claude directly under systemd (strongest supervision; watch with `journalctl -fu claude-telegram`). Either way, **don't also run `claude` by hand in your own tmux** — two sessions polling the same bot token conflict. (Cloud-provisioned boxes get the headless service automatically via `provision/bootstrap.sh`.)
 

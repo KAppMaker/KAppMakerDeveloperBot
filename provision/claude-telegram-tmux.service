@@ -4,7 +4,7 @@
 # start-on-boot. The __DEVUSER__ placeholder is replaced with the real non-root
 # user at install time.
 #
-#   Watch live:  tmux attach -t claudebot      (detach: Ctrl+B then D)
+#   Watch live:  tmux attach -t claude      (detach: Ctrl+B then D)
 #   Logs:        journalctl -u claude-telegram
 #
 # How it stays alive: a `while` loop inside tmux relaunches Claude ~15s after it
@@ -30,8 +30,8 @@ Environment=TMUX_TMPDIR=/tmp
 EnvironmentFile=-/home/__DEVUSER__/.config/kappmaker/env
 # If the box runs low on memory, prefer killing a heavy build JVM over this bot.
 OOMScoreAdjust=-500
-ExecStart=/usr/bin/tmux new-session -d -s claudebot "while true; do /home/__DEVUSER__/bin/claude-telegram-run.sh; echo '[claude-telegram] session ended — restarting in 15s'; sleep 15; done"
-ExecStop=-/usr/bin/tmux kill-session -t claudebot
+ExecStart=/usr/bin/tmux new-session -d -s claude "while true; do /home/__DEVUSER__/bin/claude-telegram-run.sh; echo '[claude-telegram] session ended — restarting in 15s'; sleep 15; done"
+ExecStop=-/usr/bin/tmux kill-session -t claude
 
 [Install]
 WantedBy=multi-user.target

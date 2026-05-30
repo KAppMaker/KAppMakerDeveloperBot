@@ -5,7 +5,7 @@
 #
 # Modes:
 #   (default)     attachable tmux  — Claude runs inside a tmux session you can
-#                 `tmux attach -t claudebot` to watch live. Restart loop + boot start.
+#                 `tmux attach -t claude` to watch live. Restart loop + boot start.
 #   --headless    pure systemd     — Claude runs directly under systemd (Restart=
 #                 always, ~15s). Strongest supervision; watch via journalctl only.
 #
@@ -67,8 +67,8 @@ echo "────────────────────────�
 echo "Always-on service installed ($MODE). Auto-restarts on crash and starts on boot."
 echo ""
 if [[ "$MODE" = "tmux" ]]; then
-  echo "  Watch it live:  tmux attach -t claudebot      (detach: Ctrl+B then D)"
-  echo "                  (if attach can't find it: TMUX_TMPDIR=/tmp tmux attach -t claudebot)"
+  echo "  Watch it live:  tmux attach -t claude      (detach: Ctrl+B then D)"
+  echo "                  (if attach can't find it: TMUX_TMPDIR=/tmp tmux attach -t claude)"
 fi
 echo "  Logs:           journalctl -fu claude-telegram"
 echo "  Status:         systemctl status claude-telegram"
