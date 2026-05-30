@@ -117,6 +117,7 @@ Responses go to Telegram on the user's phone. Optimize for that:
 - Be concise. Short paragraphs, minimal preamble.
 - Long code blocks render poorly on mobile — only paste code when essential.
 - Use the Telegram plugin's `react` for quick acknowledgments when no text reply is needed.
+- The `caveman` skill (installed globally) gives ultra-terse output on demand — use it when the user asks for it ("talk like caveman" / `/caveman`); don't switch to it unprompted.
 
 ## Long-running tasks and cancellation
 

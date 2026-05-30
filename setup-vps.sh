@@ -183,6 +183,39 @@ else
   warn "Failed to download claude-history.py — fetch manually later from $PREVIEW_BASE_URL/claude-history.py"
 fi
 
+# ---------- 9c3. recommended global skills (caveman + ui-ux-pro-max) ----------
+# Two high-value skills installed globally (~/.claude/skills) so they're available in
+# every session with no interactive /plugin step:
+#   caveman      — terse output (fewer tokens; tidy Telegram replies on a phone)
+#   ui-ux-pro-max — UI/UX design intelligence (Jetpack Compose / SwiftUI)
+# Best-effort — never fail the run. Set KAPP_SKIP_SKILLS=1 to skip. Optional extras
+# (kotlin-lsp, prototype, handoff, git-guardrails) are documented in the README.
+if [[ "${KAPP_SKIP_SKILLS:-0}" != "1" ]]; then
+  mkdir -p "$HOME/.claude"
+
+  log "Installing 'caveman' skill (terse output)"
+  # caveman's installer is `npx github:JuliusBrussee/caveman` (auto-detects Claude Code).
+  if ( cd "$HOME" && npx -y github:JuliusBrussee/caveman </dev/null ) >/dev/null 2>&1; then
+    log "caveman installed"
+  else
+    warn "caveman install skipped/failed — add later: npx -y github:JuliusBrussee/caveman"
+  fi
+
+  log "Installing 'ui-ux-pro-max' skill (UI/UX design intelligence)"
+  if $SUDO npm install -g uipro-cli >/dev/null 2>&1; then
+    # `uipro init` installs into <cwd>/.claude/skills — run from $HOME for a global install.
+    if ( cd "$HOME" && uipro init --ai claude --force </dev/null ) >/dev/null 2>&1; then
+      log "ui-ux-pro-max installed (~/.claude/skills)"
+    else
+      warn "ui-ux-pro-max init skipped/failed — add later: (cd ~ && uipro init --ai claude --force)"
+    fi
+  else
+    warn "uipro-cli install failed — add later: npm i -g uipro-cli && (cd ~ && uipro init --ai claude --force)"
+  fi
+else
+  log "KAPP_SKIP_SKILLS=1 — skipping recommended skills (caveman, ui-ux-pro-max)"
+fi
+
 # ---------- 9d. self-improve loop template + installer ----------
 # The loop is an OPT-IN scaffold: deployed here, installed per-app with `kapp-loop-install`,
 # and OFF until a human triggers it. We fetch the repo tarball and extract the two pieces.

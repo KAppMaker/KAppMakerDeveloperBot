@@ -13,7 +13,8 @@ Bootstrap a VPS to run [Claude Code](https://claude.com/claude-code) with the [T
 7. [Using it from Telegram](#using-it-from-telegram) — example commands & memory
 8. [Self-improving dev loop](#self-improving-dev-loop) — opt-in autonomous improvement loop
 9. [Working with Claude Code effectively](#working-with-claude-code-effectively) — high-value habits & best practices
-10. [Limitations](#limitations) · [Architecture](#architecture) · [Troubleshooting](#troubleshooting)
+10. [Recommended Claude Code skills](#recommended-claude-code-skills) — bundled + optional skills worth adding
+11. [Limitations](#limitations) · [Architecture](#architecture) · [Troubleshooting](#troubleshooting)
 
 ## Quick start
 
@@ -107,6 +108,7 @@ There's a community Claude Code skill that does all of the above interactively �
 | `preview` / `preview-stop` | bundled | Helper scripts in `~/bin` that wrap `cloudflared` for one-command preview links |
 | `kapp-loop-install` + loop template | bundled | Per-app self-improving dev loop scaffold (opt-in, **off by default**) — see [Self-improving dev loop](#self-improving-dev-loop) |
 | `kapp-service-install` | bundled | Opt-in installer for the always-on Claude+Telegram systemd service (auto-restart + start on boot) |
+| `caveman` + `ui-ux-pro-max` skills | bundled | Global Claude Code skills: terse output (token thrift) + UI/UX design intelligence (Compose/SwiftUI) — see [Recommended Claude Code skills](#recommended-claude-code-skills) |
 
 Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `BUN_INSTALL`, `PATH`) are persisted to `~/.bashrc` in a marked block.
 
@@ -436,6 +438,27 @@ A few high-value habits that make the bot (and the loop) produce better work. Th
 - **Lean on specialist sub-agents.** Delegating review/research to focused agents keeps the main context clean and the answers sharper (the loop does this automatically).
 - **Verification is law, not vibes.** Trust the build/test gate over "looks done" — the loop never checks a box on a red build, and you should hold normal sessions to the same bar.
 - **Mind context hygiene.** Start a fresh session for an unrelated task rather than letting one thread sprawl.
+
+## Recommended Claude Code skills
+
+The mobile-monetization gap (onboarding, paywalls, app-store work) is already covered by this repo's [self-improving dev loop](#self-improving-dev-loop) specialists and the `kappmaker` skill. The third-party skills worth adding are about UI/UX craft, token thrift, Kotlin code intelligence, and general dev workflow.
+
+### Bundled (installed by `setup-vps.sh`)
+
+These two are installed **globally** (`~/.claude/skills/`) so they're available in every session. Skip them with `KAPP_SKIP_SKILLS=1`.
+
+- **[caveman](https://github.com/JuliusBrussee/caveman)** — forces terse, stripped-down output (~65% fewer output tokens). A great fit here: you read replies on a phone via Telegram and run on a Claude subscription. Toggle with `/caveman [lite|full|ultra]`, back with "normal mode".
+- **[ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** — design intelligence with **Jetpack Compose / SwiftUI** support (UI styles, palettes, font pairings, UX guidelines, anti-pattern avoidance). Auto-activates on UI/design requests; amplifies the onboarding/paywall work.
+
+### Optional (install yourself)
+
+- **Kotlin code intelligence** — `/plugin install kotlin-lsp@claude-plugins-official` (the official marketplace is built-in), plus the `kotlin-language-server` binary on `PATH`. Gives Claude real type errors + jump-to-definition on the KMP/Compose code. **Caveat:** the language server is memory-hungry — mind it on a small box (see [the OOM note](#troubleshooting)).
+- **General workflow skills** from [mattpocock/skills](https://github.com/mattpocock/skills) — `npx skills add mattpocock/skills`, then pick:
+  - **prototype** — throwaway prototypes to validate an onboarding/paywall idea before building it.
+  - **handoff** — condense a session into a transfer doc (pairs well with the restart/session-recovery behavior).
+  - **git-guardrails** — pre-execution hooks that block dangerous git ops — useful on an autonomous `--dangerously-skip-permissions` box.
+
+> **Trust + cost:** skills run with **full trust** (arbitrary code) on a skip-permissions box, and each installed skill adds to the **context window every turn**. Install deliberately, from sources you trust, and pin versions where you can — don't bulk-install.
 
 ## Limitations
 
