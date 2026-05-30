@@ -223,11 +223,15 @@ sudo visudo -c        # must print "parsed OK"
    ```
    > This flag **only works as a non-root user** (see the note above). It removes the per-action approval prompts, so only use it on a VPS you control. The loop scaffold's `no-touch` deny-list (secrets, keystores, `**/build/**`, CI workflows) is still a guardrail, but treat skip-permissions as full trust in the agent.
 
-   **Or run it always-on (recommended over tmux).** tmux only survives SSH disconnect — it does **not** restart Claude if the process is killed (e.g. an out-of-memory kill during a build) or if the box reboots. To make the bot truly always-on, install it as a systemd service instead:
+   **Or run it always-on (recommended over plain tmux).** A tmux session you start by hand only survives SSH disconnect — it does **not** restart Claude if the process is killed (e.g. an out-of-memory kill during a build) or if the box reboots. To make the bot truly always-on:
    ```bash
    kapp-service-install
    ```
-   This installs `claude-telegram.service`, which runs the same `--channels … --dangerously-skip-permissions` command, **auto-restarts within ~15s** if it dies, and **starts on boot**. Watch it with `journalctl -fu claude-telegram`. If you use this, **don't also run `claude` in tmux** — two sessions polling the same bot token conflict. (On cloud-provisioned boxes this is already installed by `provision/bootstrap.sh`.)
+   By default this runs Claude inside an **attachable tmux session** managed by systemd — so you keep the live view you're used to **and** get auto-restart + start-on-boot:
+   ```bash
+   tmux attach -t claudebot      # watch it work live; detach with Ctrl+B then D
+   ```
+   It **auto-restarts within ~15s** if Claude dies and **starts on boot**. Prefer no tmux at all? `kapp-service-install --headless` runs Claude directly under systemd (strongest supervision; watch with `journalctl -fu claude-telegram`). Either way, **don't also run `claude` by hand in your own tmux** — two sessions polling the same bot token conflict. (Cloud-provisioned boxes get the headless service automatically via `provision/bootstrap.sh`.)
 
 7. **Log into GitHub CLI** for app repo pushes
    ```bash
