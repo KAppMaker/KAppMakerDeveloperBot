@@ -106,6 +106,7 @@ There's a community Claude Code skill that does all of the above interactively �
 | `cloudflared` | latest | Cloudflare quick tunnels for web (Wasm/JS) preview URLs |
 | `preview` / `preview-stop` | bundled | Helper scripts in `~/bin` that wrap `cloudflared` for one-command preview links |
 | `kapp-loop-install` + loop template | bundled | Per-app self-improving dev loop scaffold (opt-in, **off by default**) — see [Self-improving dev loop](#self-improving-dev-loop) |
+| `kapp-service-install` | bundled | Opt-in installer for the always-on Claude+Telegram systemd service (auto-restart + start on boot) |
 
 Environment variables (`JAVA_HOME`, `ANDROID_SDK_ROOT`, `ANDROID_HOME`, `BUN_INSTALL`, `PATH`) are persisted to `~/.bashrc` in a marked block.
 
@@ -221,6 +222,12 @@ sudo visudo -c        # must print "parsed OK"
    cd ~/projects && claude --channels plugin:telegram@claude-plugins-official --dangerously-skip-permissions
    ```
    > This flag **only works as a non-root user** (see the note above). It removes the per-action approval prompts, so only use it on a VPS you control. The loop scaffold's `no-touch` deny-list (secrets, keystores, `**/build/**`, CI workflows) is still a guardrail, but treat skip-permissions as full trust in the agent.
+
+   **Or run it always-on (recommended over tmux).** tmux only survives SSH disconnect — it does **not** restart Claude if the process is killed (e.g. an out-of-memory kill during a build) or if the box reboots. To make the bot truly always-on, install it as a systemd service instead:
+   ```bash
+   kapp-service-install
+   ```
+   This installs `claude-telegram.service`, which runs the same `--channels … --dangerously-skip-permissions` command, **auto-restarts within ~15s** if it dies, and **starts on boot**. Watch it with `journalctl -fu claude-telegram`. If you use this, **don't also run `claude` in tmux** — two sessions polling the same bot token conflict. (On cloud-provisioned boxes this is already installed by `provision/bootstrap.sh`.)
 
 7. **Log into GitHub CLI** for app repo pushes
    ```bash

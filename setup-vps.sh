@@ -136,7 +136,7 @@ fi
 PREVIEW_BASE_URL="${PREVIEW_BASE_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/bin}"
 log "Installing preview scripts to ~/bin"
 mkdir -p "$HOME/bin"
-for script in preview preview-stop; do
+for script in preview preview-stop kapp-service-install; do
   if curl -fsSL "$PREVIEW_BASE_URL/$script" -o "$HOME/bin/$script"; then
     chmod +x "$HOME/bin/$script"
   else
@@ -281,6 +281,19 @@ export PATH="\$HOME/bin:\$JAVA_HOME/bin:\$ANDROID_SDK_ROOT/cmdline-tools/latest/
 # --- end KAppMaker block ---
 EOF
 fi
+
+# Also expose the toolchain env to the always-on systemd service, which does NOT
+# read ~/.bashrc. claude-telegram.service loads this via EnvironmentFile so that
+# Gradle/Android builds triggered by the bot find JAVA_HOME / ANDROID_SDK_ROOT / PATH.
+ENV_FILE="$HOME/.config/kappmaker/env"
+mkdir -p "$HOME/.config/kappmaker"
+cat > "$ENV_FILE" <<EOF
+JAVA_HOME=$JAVA_HOME
+ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
+ANDROID_HOME=$ANDROID_SDK_ROOT
+BUN_INSTALL=$HOME/.bun
+PATH=$HOME/bin:$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$GRADLE_DIR/bin:$HOME/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EOF
 
 # ---------- 11. projects directory + top-level CLAUDE.md / MEMORY.md ----------
 PROJECTS_DIR="$HOME/projects"

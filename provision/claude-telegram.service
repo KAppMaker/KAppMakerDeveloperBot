@@ -23,8 +23,11 @@ StartLimitIntervalSec=0
 # If the box runs low on memory (e.g. a heavy Android build), make the kernel
 # prefer killing the offending build JVM over this always-on bot.
 OOMScoreAdjust=-500
-# Load the env block the bootstrap persisted (JAVA_HOME, ANDROID_SDK_ROOT, PATH, …).
+# systemd does NOT read ~/.bashrc, so load the toolchain env (JAVA_HOME,
+# ANDROID_SDK_ROOT, PATH, …) from the file setup-vps.sh writes. The leading '-'
+# means "don't fail if it's missing" (the bot still listens; only builds need it).
 Environment=HOME=/home/__DEVUSER__
+EnvironmentFile=-/home/__DEVUSER__/.config/kappmaker/env
 
 [Install]
 WantedBy=multi-user.target
