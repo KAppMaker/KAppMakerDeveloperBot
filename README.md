@@ -18,7 +18,14 @@ Bootstrap a VPS to run [Claude Code](https://claude.com/claude-code) with the [T
 
 ## Quick start
 
-On a fresh Ubuntu/Debian VPS:
+**Run the bootstrap as a non-root sudo user — not root.** The script installs **per-user** (a multi-GB Android SDK, `~/.bashrc` env, skills, the loop template all go into the running user's home), and the bot needs `--dangerously-skip-permissions`, which Claude **refuses as root**. The script does **not** create a user for you, so on a fresh VPS where you land as `root`, create one first:
+
+```bash
+sudo adduser devuser && sudo usermod -aG sudo devuser
+su - devuser
+```
+
+Then run the bootstrap **as that user** (run it **once**, as this user — running it as root first just makes a wasted second copy):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/setup-vps.sh | bash
@@ -32,7 +39,7 @@ less setup-vps.sh
 bash setup-vps.sh
 ```
 
-The script is idempotent — re-running it skips anything already installed.
+The script is idempotent — re-running it (as the **same** user) skips anything already installed. SSH-key login, UFW, Tailscale, and passwordless sudo come next in [Securing the VPS](#securing-the-vps-do-this-first).
 
 ## Securing the VPS (do this first)
 
@@ -134,7 +141,7 @@ sudo adduser devuser && sudo usermod -aG sudo devuser
 su - devuser
 ```
 
-Each user has its own env: if you ran the bootstrap as `root`, just **re-run it as `devuser`** (it's idempotent and will set up this user's `~/.bashrc` env block, SDK paths, and tools), or copy the `# --- KAppMaker VPS env ---` block from root's `~/.bashrc` into `devuser`'s and `source ~/.bashrc`.
+Each user has its own env, so **create this user before running the bootstrap (see [Quick start](#quick-start)) and run the script once, as this user** — that's the clean path. If you *already* ran it as `root`, just re-run it as `devuser` (idempotent); the root copy is harmless but redundant — you can reclaim the disk with `sudo rm -rf /root/android-sdk /root/.bun /root/projects` once `devuser` is set up.
 
 #### Log in with an SSH key (do this before disabling passwords)
 

@@ -23,6 +23,16 @@ command -v apt-get >/dev/null || die "This script targets Debian/Ubuntu (apt-get
 if [[ "$(id -u)" -eq 0 ]]; then
   SUDO=""
   SUDO_E=""
+  # Running as root installs per-user state (Android SDK, ~/.bashrc env, skills, loop
+  # template) into /root — wasted, since the bot can't use --dangerously-skip-permissions
+  # as root. The cloud path runs this as a non-root user (and sets KAPP_NONINTERACTIVE),
+  # so only warn for an interactive manual root run.
+  if [[ "${KAPP_NONINTERACTIVE:-0}" != "1" ]]; then
+    warn "Running as root. Recommended: create a non-root sudo user and run this AS that user"
+    warn "  (see the README 'Quick start'):  adduser devuser && usermod -aG sudo devuser && su - devuser"
+    warn "Continuing as root in 5s — Ctrl-C to abort and switch users."
+    sleep 5
+  fi
 else
   SUDO="sudo"
   SUDO_E="sudo -E"
