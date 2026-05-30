@@ -112,6 +112,8 @@ Unless a project's own CLAUDE.md says otherwise:
 
 ## Telegram output style
 
+**Delivery — you MUST send via the Telegram `reply` tool.** Your normal turn text (transcript output) does **not** reach the user's chat; only `reply` does. So every time you act on a Telegram message, end the turn by calling `reply` with the result — and after a long task always send a final `reply` (success **or** failure). Finishing a turn without calling `reply` means the user sees nothing; that is the #1 cause of "it didn't respond". When running autonomously (e.g. the dev loop), still send a `reply` at the end of the run.
+
 Responses go to Telegram on the user's phone. Optimize for that:
 
 - Be concise. Short paragraphs, minimal preamble.
