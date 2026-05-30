@@ -20,6 +20,9 @@ Restart=always
 RestartSec=15
 # Survive transient failures without systemd giving up.
 StartLimitIntervalSec=0
+# If the box runs low on memory (e.g. a heavy Android build), make the kernel
+# prefer killing the offending build JVM over this always-on bot.
+OOMScoreAdjust=-500
 # Load the env block the bootstrap persisted (JAVA_HOME, ANDROID_SDK_ROOT, PATH, …).
 Environment=HOME=/home/__DEVUSER__
 

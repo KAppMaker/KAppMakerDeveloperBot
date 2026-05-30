@@ -172,6 +172,61 @@ else
 fi
 rm -rf "$TMP_TGZ" "$TMP_EXTRACT"
 
+# ---------- 9e. swap + build memory tuning ----------
+# Android/Gradle builds are memory-hungry. With no swap, a build that exceeds RAM
+# triggers the Linux OOM killer, which can take down Claude or your tmux session
+# ("my session randomly died"). Add a swapfile as a backstop and right-size the
+# JVM heaps for this box, leaving headroom for the OS and the always-on Claude bot.
+log "Configuring swap + Gradle memory (prevents OOM kills during builds)"
+RAM_MB="$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)"
+
+# 1) swapfile — only if no swap is active and there's room on disk.
+SWAP_TOTAL_MB="$(free -m 2>/dev/null | awk '/Swap:/{print $2}' || echo 0)"
+if [[ "${SWAP_TOTAL_MB:-0}" -eq 0 ]]; then
+  DISK_FREE_MB="$(df --output=avail -m / 2>/dev/null | tail -1 | tr -d ' ' || echo 0)"
+  if [[ "${DISK_FREE_MB:-0}" -ge 8192 ]]; then
+    log "No swap found — creating a 4G swapfile"
+    if $SUDO fallocate -l 4G /swapfile 2>/dev/null || $SUDO dd if=/dev/zero of=/swapfile bs=1M count=4096 status=none; then
+      $SUDO chmod 600 /swapfile
+      $SUDO mkswap /swapfile >/dev/null
+      $SUDO swapon /swapfile
+      grep -q '^/swapfile ' /etc/fstab 2>/dev/null || echo '/swapfile none swap sw 0 0' | $SUDO tee -a /etc/fstab >/dev/null
+      # Prefer RAM; lean on swap only under real pressure.
+      echo 'vm.swappiness=10' | $SUDO tee /etc/sysctl.d/99-kappmaker-swap.conf >/dev/null
+      $SUDO sysctl -q vm.swappiness=10 2>/dev/null || true
+    else
+      warn "Could not create swapfile — skipping (builds may OOM on low-RAM boxes)."
+    fi
+  else
+    warn "Low free disk (<8G) — skipping swapfile creation."
+  fi
+else
+  log "Swap already present (${SWAP_TOTAL_MB}M) — leaving it as-is"
+fi
+
+# 2) VPS-local Gradle tuning. Written to GRADLE_USER_HOME (~/.gradle), which
+# overrides a project's gradle.properties — so dev-machine settings stay intact.
+# KAppMaker apps ship -Xmx4G for BOTH the Gradle and Kotlin daemons (~8G of heap),
+# which is tuned for a workstation, not a shared VPS also running the Claude bot.
+GRADLE_PROPS="$HOME/.gradle/gradle.properties"
+if [[ "${RAM_MB:-0}" -gt 0 && ! -f "$GRADLE_PROPS" ]]; then
+  GRADLE_XMX=$(( RAM_MB * 40 / 100 )); [[ "$GRADLE_XMX" -lt 1024 ]] && GRADLE_XMX=1024; [[ "$GRADLE_XMX" -gt 4096 ]] && GRADLE_XMX=4096
+  KOTLIN_XMX=$(( RAM_MB * 25 / 100 )); [[ "$KOTLIN_XMX" -lt 768 ]] && KOTLIN_XMX=768; [[ "$KOTLIN_XMX" -gt 3072 ]] && KOTLIN_XMX=3072
+  mkdir -p "$HOME/.gradle"
+  cat > "$GRADLE_PROPS" <<EOF
+# Managed by setup-vps.sh — VPS-local Gradle tuning (overrides project gradle.properties).
+# Sized for ${RAM_MB}MB RAM, leaving headroom for the OS and the Claude bot.
+# Delete this file to fall back to the project's own settings.
+org.gradle.jvmargs=-Xmx${GRADLE_XMX}m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
+kotlin.daemon.jvmargs=-Xmx${KOTLIN_XMX}m
+org.gradle.parallel=false
+org.gradle.workers.max=2
+EOF
+  log "Wrote $GRADLE_PROPS (Gradle ${GRADLE_XMX}m / Kotlin ${KOTLIN_XMX}m, sized for ${RAM_MB}M RAM)"
+elif [[ -f "$GRADLE_PROPS" ]]; then
+  log "~/.gradle/gradle.properties already exists — leaving it as-is"
+fi
+
 # ---------- 10. persist env vars ----------
 log "Persisting env vars to ~/.bashrc"
 BLOCK_MARK="# --- KAppMaker VPS env (managed by setup-vps.sh) ---"
