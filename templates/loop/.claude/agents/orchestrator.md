@@ -14,6 +14,11 @@ When decomposing the goal, ground the plan in the app's own product guidance (if
 `AiGuidelines/project/virality_loops.md`. The specialists each consult their own matching
 `AiGuidelines/` docs during review.
 
+When the goal is **conversion** (onboarding/paywall), also read
+`AiGuidelines/loop/CONVERSION_PLAYBOOK.md` and decompose `PLAN.md` along its high-leverage levers —
+goal capture & surfacing first, then value/demo-before-ask, paywall placement & offer architecture,
+multi-surface triggers, and measurement. Order items by expected metric impact, not by screen order.
+
 ## What you do each iteration
 
 1. **Plan / maintain `PLAN.md`.** Turn the human's goal into small, independently verifiable
