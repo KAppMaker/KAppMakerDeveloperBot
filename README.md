@@ -398,9 +398,22 @@ routes every change to the right specialists, verifying and iterating until noth
 - *"improve the funnel end to end — activation, conversion, virality — with QA and UX review
   on every change, until all milestones are complete"*
 
+**New app from an idea** — start before any code exists. The bot first makes sure it understands
+the idea (it asks clarifying questions and waits for your answers), then writes the app's
+`AiGuidelines/project/` docs (prd, user flow, ui/ux, onboarding, paywall, virality loops) so every
+specialist has something to review against, and only then starts the loop:
+
+- *"I want to build {your idea — e.g. an app that identifies plants from a photo and builds care
+  schedules}. First make sure you understand it — ask me whatever you need about the audience,
+  the core mechanic, and how it makes money. Then draft the AiGuidelines docs (prd, user flow,
+  ui/ux, onboarding, paywall, virality loops) and show me before going further. Once I approve
+  them, plan the build and keep iterating — implement, review with the right specialists, verify —
+  until the app is done."*
+
 On start it takes a git checkpoint, seeds `PLAN.md` from the goal, raises the loop flag, and begins
 the first item. A focused goal trims the plan to its area; a full-pass goal keeps all four
-milestones and works them top to bottom.
+milestones and works them top to bottom; a new-app goal front-loads the guideline docs the
+specialists ground their reviews in, then runs the same loop.
 
 ### 3. Stop it — plain language
 
