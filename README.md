@@ -351,7 +351,8 @@ An **opt-in** autonomous loop that improves an app one small, verified change at
 work, implements the top item, spins up specialist sub-agents to critique the change, applies the
 worthwhile suggestions, runs a real Gradle gate, and only then checks the item off — repeating until
 the plan is done or you say stop. Its default goal is **conversion** (free→paid subscriptions +
-credit-pack purchases), reviewed ethically (it refuses dark patterns).
+credit-pack purchases), with **growth/virality** (share loops, referrals, ratings timing) as a
+second lens — reviewed ethically (it refuses dark patterns and spammy growth hacks).
 
 It is **not** installed in apps automatically and **never runs until you trigger it** with a plain
 message — the same whether you're in the terminal or on Telegram. There are no slash commands.
@@ -413,6 +414,8 @@ orchestrator alone:
 | `paywall-conversion-specialist` | Subscription + credit-pack conversion, trial framing, pricing (ethical) |
 | `ui-ux-reviewer` | Compose UI: tap targets, accessibility, dark mode, snapshot impact |
 | `qa-engineer` | Kotlin/coroutine correctness, edge cases, missing tests, build safety |
+| `growth-virality-specialist` | Share/referral loops, ratings timing, deep links, k-factor (ethical — no spam) |
+| `delight-specialist` | Haptics, micro-interactions, motion polish, premium feel |
 
 ### Example session (from Telegram)
 
@@ -424,9 +427,9 @@ You:  install the self-improve loop here
 Bot:  Done — loop installed, off by default.
 
 You:  improve the onboarding conversion and keep going until it's done
-Bot:  ⏳ Loop started. Seeded PLAN.md (3 milestones, 11 items). Working item 1…
+Bot:  ⏳ Loop started. Seeded PLAN.md (4 milestones, 15 items). Working item 1…
       …(iterates: implement → review → verify → check off)…
-Bot:  done — completed 11/11 items. Report: .loop/reports/run-2026-05-29T1430.md
+Bot:  done — completed 15/15 items. Report: .loop/reports/run-2026-05-29T1430.md
       Highlights: chose OnBoarding variation 2, moved paywall after first value moment,
       fixed 2 a11y issues. All gates green.
 

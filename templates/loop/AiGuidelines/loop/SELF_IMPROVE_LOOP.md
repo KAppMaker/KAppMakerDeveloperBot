@@ -59,12 +59,18 @@ then tailors the milestones/items to the actual goal the human gave.
   iteration). If the tree is dirty when you begin an item, commit or stash the prior work first.
 
 ### 3. Review (parallel specialists)
-Spawn the relevant specialist sub-agents to critique the change (cap **3–4 concurrent**). Pick by
+Spawn the relevant specialist sub-agents to critique the change (cap **3–4 concurrent** — with six
+specialists available, pick the most relevant by tag and changed files, never all of them). Pick by
 the item's reviewer tags and by what files changed:
 - `onboarding-specialist` — onboarding / activation / first-run.
 - `paywall-conversion-specialist` — paywall, subscription, credit-pack, pricing.
 - `ui-ux-reviewer` — any Compose UI / design-system / screen change.
 - `qa-engineer` — correctness, edge cases, tests, build safety.
+- `growth-virality-specialist` — share/referral/invite flows, deep links, ratings prompts,
+  k-factor instrumentation. Spawn when the item is tagged `growth` or touches share/referral code.
+- `delight-specialist` — haptics, micro-interactions, motion polish, premium feel. Spawn when the
+  item is tagged `delight` or touches a hero moment (onboarding finale, paywall, success states);
+  skip for pure logic changes.
 
 Each specialist is **read-mostly**: it reviews and recommends but does not edit code. It ends its
 turn by writing `.loop/reviews/<agent>-<ISO8601>.md` with these sections:

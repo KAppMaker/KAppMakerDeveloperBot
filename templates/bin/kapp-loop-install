@@ -39,6 +39,7 @@ mkdir -p "$APP_DIR/AiGuidelines/loop"
 cp "$TEMPLATE/AiGuidelines/loop/SELF_IMPROVE_LOOP.md" "$APP_DIR/AiGuidelines/loop/SELF_IMPROVE_LOOP.md"
 cp "$TEMPLATE/AiGuidelines/loop/PLAN.template.md" "$APP_DIR/AiGuidelines/loop/PLAN.template.md"
 cp "$TEMPLATE/AiGuidelines/loop/CONVERSION_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/CONVERSION_PLAYBOOK.md"
+cp "$TEMPLATE/AiGuidelines/loop/GROWTH_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/GROWTH_PLAYBOOK.md"
 
 # --- runtime working data -> .loop/ (generated logs/output, kept out of AiGuidelines) ---
 mkdir -p "$APP_DIR/.loop/reviews" "$APP_DIR/.loop/reports"
