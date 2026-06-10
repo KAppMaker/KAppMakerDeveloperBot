@@ -353,7 +353,32 @@ if [[ ! -f "$PROJECTS_DIR/CLAUDE.md" ]]; then
     rm -f "$PROJECTS_DIR/CLAUDE.md"
   fi
 else
-  log "Top-level CLAUDE.md already exists, skipping (delete it to fetch the default again)"
+  # File exists — check whether the template has changed since it was installed (template
+  # updates carry bot-behavior fixes, e.g. how questions are delivered over Telegram).
+  TMP_CLAUDE="$(mktemp)"
+  if curl -fsSL "$CLAUDE_MD_URL" -o "$TMP_CLAUDE"; then
+    if cmp -s "$TMP_CLAUDE" "$PROJECTS_DIR/CLAUDE.md"; then
+      log "Top-level CLAUDE.md is up to date with the template."
+    elif [[ "${KAPP_NONINTERACTIVE:-0}" == "1" || ! -e /dev/tty ]]; then
+      cp "$TMP_CLAUDE" "$PROJECTS_DIR/CLAUDE.md.new"
+      warn "Workspace CLAUDE.md template has changed. Kept your file; wrote the new version to"
+      warn "  $PROJECTS_DIR/CLAUDE.md.new — review and replace/merge manually."
+    else
+      warn "Your workspace CLAUDE.md differs from the latest template (updates carry bot-behavior fixes)."
+      read -r -p "Overwrite with the new template? Your current file is backed up to CLAUDE.md.bak [y/N] " ans </dev/tty
+      if [[ "$ans" =~ ^[Yy]$ ]]; then
+        cp "$PROJECTS_DIR/CLAUDE.md" "$PROJECTS_DIR/CLAUDE.md.bak"
+        cp "$TMP_CLAUDE" "$PROJECTS_DIR/CLAUDE.md"
+        log "CLAUDE.md updated (previous version saved as CLAUDE.md.bak)."
+      else
+        cp "$TMP_CLAUDE" "$PROJECTS_DIR/CLAUDE.md.new"
+        log "Kept your CLAUDE.md. New template saved as CLAUDE.md.new for manual merge."
+      fi
+    fi
+  else
+    warn "Failed to download CLAUDE.md template to check for updates — kept the existing file."
+  fi
+  rm -f "$TMP_CLAUDE"
 fi
 
 if [[ ! -f "$PROJECTS_DIR/MEMORY.md" ]]; then
