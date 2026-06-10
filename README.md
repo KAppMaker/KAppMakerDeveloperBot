@@ -379,13 +379,28 @@ existing config is never clobbered (if `.claude/settings.json` already exists it
 
 Just describe the goal and tell it to keep going. Examples (terminal or Telegram):
 
+**Focused goals** — the loop plans one area and pulls in the relevant specialists:
+
 - *"improve the onboarding conversion and keep going until it's done"*
 - *"start the self-improve loop on the paywall"*
 - *"run the dev loop — focus on the credit-pack purchase flow"*
 - *"work on first-run activation autonomously until the plan is complete"*
+- *"add a shareable moment and a referral loop, keep going until it's verified"*
+- *"polish the hero screens — haptics, motion, premium feel — until the plan is done"*
+
+**Full pass** — one prompt that works the whole funnel in phases; the orchestrator plans
+milestone by milestone (onboarding → paywall → UX/delight/quality → growth & shareability) and
+routes every change to the right specialists, verifying and iterating until nothing is left:
+
+- *"do a full improvement pass on this app: onboarding first, then the paywall, then UI/UX
+  polish and quality, then growth and shareability — review every change with the right
+  specialists, verify each step, and keep iterating until the whole plan is done"*
+- *"improve the funnel end to end — activation, conversion, virality — with QA and UX review
+  on every change, until all milestones are complete"*
 
 On start it takes a git checkpoint, seeds `PLAN.md` from the goal, raises the loop flag, and begins
-the first item.
+the first item. A focused goal trims the plan to its area; a full-pass goal keeps all four
+milestones and works them top to bottom.
 
 ### 3. Stop it — plain language
 
