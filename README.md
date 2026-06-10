@@ -351,7 +351,8 @@ An **opt-in** autonomous loop that improves an app one small, verified change at
 work, implements the top item, spins up specialist sub-agents to critique the change, applies the
 worthwhile suggestions, runs a real Gradle gate, and only then checks the item off — repeating until
 the plan is done or you say stop. Its default goal is **conversion** (free→paid subscriptions +
-credit-pack purchases), reviewed ethically (it refuses dark patterns).
+credit-pack purchases), with **growth/virality** (share loops, referrals, ratings timing) as a
+second lens — reviewed ethically (it refuses dark patterns and spammy growth hacks).
 
 It is **not** installed in apps automatically and **never runs until you trigger it** with a plain
 message — the same whether you're in the terminal or on Telegram. There are no slash commands.
@@ -378,13 +379,41 @@ existing config is never clobbered (if `.claude/settings.json` already exists it
 
 Just describe the goal and tell it to keep going. Examples (terminal or Telegram):
 
+**Focused goals** — the loop plans one area and pulls in the relevant specialists:
+
 - *"improve the onboarding conversion and keep going until it's done"*
 - *"start the self-improve loop on the paywall"*
 - *"run the dev loop — focus on the credit-pack purchase flow"*
 - *"work on first-run activation autonomously until the plan is complete"*
+- *"add a shareable moment and a referral loop, keep going until it's verified"*
+- *"polish the hero screens — haptics, motion, premium feel — until the plan is done"*
+
+**Full pass** — one prompt that works the whole funnel in phases; the orchestrator plans
+milestone by milestone (onboarding → paywall → UX/delight/quality → growth & shareability) and
+routes every change to the right specialists, verifying and iterating until nothing is left:
+
+- *"do a full improvement pass on this app: onboarding first, then the paywall, then UI/UX
+  polish and quality, then growth and shareability — review every change with the right
+  specialists, verify each step, and keep iterating until the whole plan is done"*
+- *"improve the funnel end to end — activation, conversion, virality — with QA and UX review
+  on every change, until all milestones are complete"*
+
+**New app from an idea** — start before any code exists. The bot first makes sure it understands
+the idea (it asks clarifying questions and waits for your answers), then writes the app's
+`AiGuidelines/project/` docs (prd, user flow, ui/ux, onboarding, paywall, virality loops) so every
+specialist has something to review against, and only then starts the loop:
+
+- *"I want to build {your idea — e.g. an app that identifies plants from a photo and builds care
+  schedules}. First make sure you understand it — ask me whatever you need about the audience,
+  the core mechanic, and how it makes money. Then draft the AiGuidelines docs (prd, user flow,
+  ui/ux, onboarding, paywall, virality loops) and show me before going further. Once I approve
+  them, plan the build and keep iterating — implement, review with the right specialists, verify —
+  until the app is done."*
 
 On start it takes a git checkpoint, seeds `PLAN.md` from the goal, raises the loop flag, and begins
-the first item.
+the first item. A focused goal trims the plan to its area; a full-pass goal keeps all four
+milestones and works them top to bottom; a new-app goal front-loads the guideline docs the
+specialists ground their reviews in, then runs the same loop.
 
 ### 3. Stop it — plain language
 
@@ -413,6 +442,23 @@ orchestrator alone:
 | `paywall-conversion-specialist` | Subscription + credit-pack conversion, trial framing, pricing (ethical) |
 | `ui-ux-reviewer` | Compose UI: tap targets, accessibility, dark mode, snapshot impact |
 | `qa-engineer` | Kotlin/coroutine correctness, edge cases, missing tests, build safety |
+| `growth-virality-specialist` | Share/referral loops, ratings timing, deep links, k-factor (ethical — no spam) |
+| `delight-specialist` | Haptics, micro-interactions, motion polish, premium feel |
+
+### Specialist-led audits — one prompt per lane
+
+Each prompt below runs the same loop but aims it at one specialist's lane: the orchestrator seeds
+the plan with an audit, the specialist's findings become plan items, and the loop fixes them one
+verified change at a time (`qa-engineer` still reviews anything risky):
+
+| Lane | Prompt |
+|---|---|
+| Onboarding | *"audit the onboarding flow — goal capture, time-to-value, permission priming, friction — turn every finding into a plan item and fix them until activation is as good as it gets"* |
+| Paywall | *"audit the paywall and credit packs — timing, offer architecture, trial framing, CTA clarity, PPP pricing — find the conversion issues and fix them, honestly, until the plan is done"* |
+| UI/UX | *"do a UI/UX audit of every screen — tap targets, accessibility, dark mode, loading/empty/error states, platform conventions — and fix everything found, verifying snapshots as you go"* |
+| QA | *"do a hardening pass — hunt for correctness bugs, unhandled edge and offline states, missing tests, and build hygiene issues — and fix them until the whole gate is green"* |
+| Growth | *"audit the growth loops — shareable moments, referral structure, ratings-prompt timing, deep links, k-factor events — find what's missing or broken and build/fix it until done"* |
+| Delight | *"do a delight pass — find every place the app feels cheap or default, then add the polish: haptics on success, motion at hero moments, loading and empty states with personality — small verified changes until it feels premium"* |
 
 ### Example session (from Telegram)
 
@@ -424,9 +470,9 @@ You:  install the self-improve loop here
 Bot:  Done — loop installed, off by default.
 
 You:  improve the onboarding conversion and keep going until it's done
-Bot:  ⏳ Loop started. Seeded PLAN.md (3 milestones, 11 items). Working item 1…
+Bot:  ⏳ Loop started. Seeded PLAN.md (4 milestones, 15 items). Working item 1…
       …(iterates: implement → review → verify → check off)…
-Bot:  done — completed 11/11 items. Report: .loop/reports/run-2026-05-29T1430.md
+Bot:  done — completed 15/15 items. Report: .loop/reports/run-2026-05-29T1430.md
       Highlights: chose OnBoarding variation 2, moved paywall after first value moment,
       fixed 2 a11y issues. All gates green.
 

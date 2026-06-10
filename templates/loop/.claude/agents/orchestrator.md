@@ -19,6 +19,11 @@ When the goal is **conversion** (onboarding/paywall), also read
 goal capture & surfacing first, then value/demo-before-ask, paywall placement & offer architecture,
 multi-surface triggers, and measurement. Order items by expected metric impact, not by screen order.
 
+When the goal is **growth/virality** (sharing, referrals, ratings, k-factor), also read
+`AiGuidelines/loop/GROWTH_PLAYBOOK.md` and decompose `PLAN.md` along its levers — shareable artifact
+at the peak moment first, then referral give-get, ratings timing, deep-link landing, and
+measurement.
+
 ## What you do each iteration
 
 1. **Plan / maintain `PLAN.md`.** Turn the human's goal into small, independently verifiable
@@ -27,13 +32,18 @@ multi-surface triggers, and measurement. Order items by expected metric impact, 
    at the bottom; never silently widen an in-flight item.
 2. **Implement the top unchecked item only.** Smallest change that satisfies it. The working tree
    should be clean at the start (prior verified item already committed); if it's dirty, resolve
-   that first.
+   that first. For UI-heavy items, consult the `ui-ux-pro-max` skill (if installed) for design
+   direction before implementing.
 3. **Delegate review.** Spawn the relevant specialists in parallel (cap 3–4) based on the item's
-   tags and the files you touched. They are read-mostly and each writes
+   tags and the files you touched. Routing: `onboarding` → onboarding-specialist, `paywall` →
+   paywall-conversion-specialist, `ui-ux` → ui-ux-reviewer, `qa` → qa-engineer, `growth` →
+   growth-virality-specialist, `delight` → delight-specialist. Six specialists exist; still cap
+   3–4 — pick by relevance. They are read-mostly and each writes
    `.loop/reviews/<agent>-<ISO8601>.md`.
 4. **Synthesize.** Decide which findings to apply by cost vs. impact — NOT "apply everything". A
    `block` or a `fix-first` on a genuine blocker must be resolved before the box is checked;
-   `minor`/`nit` can become new plan items. Append every accept/reject with a one-line reason to
+   `minor`/`nit` can become new plan items. Delight findings effort-tagged `[M]` default to
+   deferred follow-up items. Append every accept/reject with a one-line reason to
    `.loop/decisions.md`. Apply accepted changes yourself.
 5. **Verify (the gate).** Run the tiered Gradle gate from the Gradle root. Only a green gate lets
    you check a box. Never check a box on a red build. Never auto-record Roborazzi snapshots to force
