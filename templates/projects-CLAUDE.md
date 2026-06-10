@@ -114,6 +114,14 @@ Unless a project's own CLAUDE.md says otherwise:
 
 **Delivery — you MUST send via the Telegram `reply` tool.** Your normal turn text (transcript output) does **not** reach the user's chat; only `reply` does. So every time you act on a Telegram message, end the turn by calling `reply` with the result — and after a long task always send a final `reply` (success **or** failure). Finishing a turn without calling `reply` means the user sees nothing; that is the #1 cause of "it didn't respond". When running autonomously (e.g. the dev loop), still send a `reply` at the end of the run.
 
+**Questions & clarifications — never use interactive terminal prompts.** The `AskUserQuestion` tool (and any option-picker / plan-approval dialog) renders only in the terminal UI — it is **never delivered to Telegram**, so the user sees nothing and the session sits blocked waiting for input that can't arrive. When a turn was driven from Telegram and you need a decision:
+
+1. Send the question via `reply` as plain text, with the choices as a short numbered list (`1. …  2. …  3. …`) and a one-line default ("if you just say 'go', I'll do 1").
+2. End the turn — don't block on anything.
+3. Treat the user's next Telegram message ("1", "the second one", free text) as the answer and continue.
+
+Same rule for plan approval: summarize the plan in a `reply` and ask for a "yes / change X" message instead of opening an interactive approval dialog.
+
 Responses go to Telegram on the user's phone. Optimize for that:
 
 - Be concise. Short paragraphs, minimal preamble.
