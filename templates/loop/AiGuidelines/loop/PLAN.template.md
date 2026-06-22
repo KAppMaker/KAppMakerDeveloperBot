@@ -7,10 +7,11 @@
 >
 > Reviewer tags: `onboarding`, `paywall`, `ui-ux`, `qa`, `growth`, `delight`.
 >
-> Conversion goals: ground items in `AiGuidelines/loop/CONVERSION_PLAYBOOK.md` (conversion) and
-> `AiGuidelines/loop/GROWTH_PLAYBOOK.md` (growth/virality) and order by expected
-> metric impact (goal capture & surfacing usually first), not by screen order. The example items below
-> are a starting point — replace/reorder them for the actual `<goal>`.
+> Ground items in the playbooks: `AiGuidelines/loop/CONVERSION_PLAYBOOK.md` (conversion),
+> `AiGuidelines/loop/GROWTH_PLAYBOOK.md` (growth/virality), and
+> `AiGuidelines/loop/DESIGN_PLAYBOOK.md` (visual craft — for any `ui-ux`-tagged item). Order by
+> expected metric impact (goal capture & surfacing usually first), not by screen order. The example
+> items below are a starting point — replace/reorder them for the actual `<goal>`.
 
 **North-star:** subscription free→paid AND credit-pack purchase conversion (ethical means only).
 
@@ -35,7 +36,11 @@
       restore, cancel) if missing `[paywall, qa]`
 
 ## M3 — UX, delight & quality hardening
-- [ ] Tap-target + accessibility pass (contrast, labels, dynamic type) on changed screens `[ui-ux]`
+- [ ] Visual design-system pass (design playbook §1–6): route hardcoded values through tokens, fix
+      spacing rhythm + type hierarchy, replace the default Material 3 purple seed, make
+      elevation/shape consistent — run the anti-slop checklist (§11) `[ui-ux]`
+- [ ] Tap-target + accessibility pass (contrast, labels, dynamic type, design playbook) on changed
+      screens `[ui-ux]`
 - [ ] Cover error / offline / empty states for changed flows `[qa]`
 - [ ] Add/refresh Roborazzi snapshot coverage for changed screens (record deliberately) `[qa, ui-ux]`
 - [ ] Add one cheap delight pass to the highest-traffic hero moment (haptic on success,
