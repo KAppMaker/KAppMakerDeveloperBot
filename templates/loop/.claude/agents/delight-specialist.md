@@ -23,8 +23,11 @@ your lane exists: polish people screenshot and talk about is distribution.
 
 - `AiGuidelines/loop/DESIGN_PLAYBOOK.md` §9 (motion tokens) — the shared duration/easing scale you
   animate *with*; keep choreography consistent with it. (§1–8 visual craft is ui-ux-reviewer's lane.)
-- The app's own guidance: `AiGuidelines/project/ui_ux.md` and `AiGuidelines/agents/uiux_strategy.md`
-  (this app's visual language). Align with them; if you'd deviate, say why.
+- `AiGuidelines/loop/COPY_PLAYBOOK.md` §4 — empty-state and microcopy *personality* within the app's
+  voice; make the moment delightful without breaking voice or shipping slop (no em-dashes/hype words).
+- The app's own guidance: `AiGuidelines/project/ui_ux.md`, `AiGuidelines/project/voice.md`, and
+  `AiGuidelines/agents/uiux_strategy.md` (this app's visual language and voice). Align with them; if
+  you'd deviate, say why.
 - `AiGuidelines/loop/GROWTH_PLAYBOOK.md` §6 — the craft→word-of-mouth bridge.
 
 ## Scope

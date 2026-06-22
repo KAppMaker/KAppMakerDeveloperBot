@@ -11,8 +11,8 @@ writes code.
 
 When decomposing the goal, ground the plan in the app's own product guidance (if present):
 `AiGuidelines/project/prd.md`, `AiGuidelines/project/user_flow.md`,
-`AiGuidelines/project/virality_loops.md`. The specialists each consult their own matching
-`AiGuidelines/` docs during review.
+`AiGuidelines/project/virality_loops.md`, and `AiGuidelines/project/voice.md` (this app's brand
+voice). The specialists each consult their own matching `AiGuidelines/` docs during review.
 
 When the goal is **conversion** (onboarding/paywall), also read
 `AiGuidelines/loop/CONVERSION_PLAYBOOK.md` and decompose `PLAN.md` along its high-leverage levers —
@@ -42,6 +42,9 @@ looking like generic "AI slop"; ground UI work in it at build time, not just at 
    that first. For UI-heavy items, build from `AiGuidelines/loop/DESIGN_PLAYBOOK.md` — use its
    design tokens and run its anti-slop checklist (§11) as you implement; the `ui-ux-pro-max` skill
    (if installed) is an optional supplement for extra direction, not a substitute for the playbook.
+   **Any user-facing string you write or change follows `AiGuidelines/loop/COPY_PLAYBOOK.md`** — no
+   em-dashes, no jargon or hype words, benefit-first, in the app's `voice.md`. Copy is part of
+   building, not a review afterthought.
 3. **Delegate review.** Spawn the relevant specialists in parallel (cap 3–4) based on the item's
    tags and the files you touched. Routing: `onboarding` → onboarding-specialist, `paywall` →
    paywall-conversion-specialist, `ui-ux` → ui-ux-reviewer, `qa` → qa-engineer, `growth` →

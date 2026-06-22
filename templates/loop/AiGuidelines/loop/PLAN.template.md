@@ -8,18 +8,21 @@
 > Reviewer tags: `onboarding`, `paywall`, `ui-ux`, `qa`, `growth`, `delight`.
 >
 > Ground items in the playbooks: `AiGuidelines/loop/CONVERSION_PLAYBOOK.md` (conversion),
-> `AiGuidelines/loop/GROWTH_PLAYBOOK.md` (growth/virality), and
-> `AiGuidelines/loop/DESIGN_PLAYBOOK.md` (visual craft — for any `ui-ux`-tagged item). Order by
-> expected metric impact (goal capture & surfacing usually first), not by screen order. The example
-> items below are a starting point — replace/reorder them for the actual `<goal>`.
+> `AiGuidelines/loop/GROWTH_PLAYBOOK.md` (growth/virality), `AiGuidelines/loop/DESIGN_PLAYBOOK.md`
+> (visual craft — any `ui-ux`-tagged item), and `AiGuidelines/loop/COPY_PLAYBOOK.md` (voice &
+> microcopy — any item that writes user-facing text). Order by expected metric impact (goal capture &
+> surfacing usually first), not by screen order. The example items below are a starting point —
+> replace/reorder them for the actual `<goal>`.
 
 **North-star:** subscription free→paid AND credit-pack purchase conversion (ethical means only).
 
 ## M1 — Onboarding activation
+- [ ] Rewrite onboarding copy to the copy playbook — emotional hook on screen 1, no jargon, **no
+      em-dashes**, benefit-first, in the app's `voice.md` (copy playbook §2–§3) `[onboarding]`
 - [ ] Capture the user's primary goal in onboarding and **surface it on the paywall** (the top lever
-      per playbook §2.1) `[onboarding, paywall]`
-- [ ] Confirm/choose the onboarding pattern for this app (short-emotional vs questionnaire-led, playbook
-      §1) and pick the stronger `OnBoardingScreen` variation — justify in decisions `[onboarding, ui-ux]`
+      per conversion playbook §2.1) `[onboarding, paywall]`
+- [ ] Confirm/choose the onboarding pattern for this app (short-emotional vs questionnaire-led, conversion
+      playbook §1) and pick the stronger `OnBoardingScreen` variation — justify in decisions `[onboarding, ui-ux]`
 - [ ] Deliver a real first taste of value before any signup/paywall (use the core mechanic, not a tour) `[onboarding, paywall]`
 - [ ] Add benefit-framed permission priming before each system permission dialog; no upfront wall `[onboarding, qa]`
 - [ ] Tighten time-to-first-value: cut steps/fields that don't change the experience `[onboarding, ui-ux]`
