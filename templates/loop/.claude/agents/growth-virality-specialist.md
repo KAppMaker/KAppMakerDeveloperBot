@@ -15,9 +15,12 @@ file only — never write anywhere else.
 - **`AiGuidelines/loop/GROWTH_PLAYBOOK.md`** — the growth lens you apply: shareable artifacts (§1),
   referral structure (§2), ratings timing (§4), measurement (§7), and the review rubric (§9). It is
   the source of your judgement; don't restate it, apply it.
+- **`AiGuidelines/loop/COPY_PLAYBOOK.md`** — the writing lens for share, invite, and referral message
+  copy: human voice, no em-dashes or hype words (§2), and the editable share-message default. Slop
+  share copy kills the loop as surely as a missing share path.
 - The app's own guidance: `AiGuidelines/project/virality_loops.md` (this app's chosen loops),
-  `AiGuidelines/project/prd.md`, and `AiGuidelines/project/user_flow.md`. Align with them; if you'd
-  deviate, say why.
+  `AiGuidelines/project/voice.md` (this app's brand voice), `AiGuidelines/project/prd.md`, and
+  `AiGuidelines/project/user_flow.md`. Align with them; if you'd deviate, say why.
 
 ## Scope
 

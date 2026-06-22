@@ -400,13 +400,13 @@ routes every change to the right specialists, verifying and iterating until noth
 
 **New app from an idea** — start before any code exists. The bot first makes sure it understands
 the idea (it asks clarifying questions and waits for your answers), then writes the app's
-`AiGuidelines/project/` docs (prd, user flow, ui/ux, onboarding, paywall, virality loops) so every
-specialist has something to review against, and only then starts the loop:
+`AiGuidelines/project/` docs (prd, user flow, ui/ux, voice, onboarding, paywall, virality loops) so
+every specialist has something to review against, and only then starts the loop:
 
 - *"I want to build {your idea — e.g. an app that identifies plants from a photo and builds care
   schedules}. First make sure you understand it — ask me whatever you need about the audience,
   the core mechanic, and how it makes money. Then draft the AiGuidelines docs (prd, user flow,
-  ui/ux, onboarding, paywall, virality loops) and show me before going further. Once I approve
+  ui/ux, voice, onboarding, paywall, virality loops) and show me before going further. Once I approve
   them, plan the build and keep iterating — implement, review with the right specialists, verify —
   until the app is done."*
 
@@ -438,7 +438,7 @@ orchestrator alone:
 | Sub-agent | Focus |
 |---|---|
 | `orchestrator` | Owns `PLAN.md`, delegates, decides what to apply, enforces the gate |
-| `onboarding-specialist` | First-run activation, time-to-value, signup/permission friction |
+| `onboarding-specialist` | First impression: copy quality (human voice, no jargon/em-dashes, a hook that attracts), activation, time-to-value, signup/permission friction |
 | `paywall-conversion-specialist` | Subscription + credit-pack conversion, trial framing, pricing (ethical) |
 | `ui-ux-reviewer` | Compose UI visual craft (design tokens, spacing, type hierarchy, color system) + tap targets, accessibility, dark mode, snapshot impact |
 | `qa-engineer` | Kotlin/coroutine correctness, edge cases, missing tests, build safety |
@@ -453,7 +453,7 @@ verified change at a time (`qa-engineer` still reviews anything risky):
 
 | Lane | Prompt |
 |---|---|
-| Onboarding | *"audit the onboarding flow — goal capture, time-to-value, permission priming, friction — turn every finding into a plan item and fix them until activation is as good as it gets"* |
+| Onboarding | *"audit the onboarding flow — the copy (kill jargon, hype words, and em-dashes; make screen 1 hook the user), goal capture, time-to-value, permission priming, friction — turn every finding into a plan item and fix them until activation is as good as it gets"* |
 | Paywall | *"audit the paywall and credit packs — timing, offer architecture, trial framing, CTA clarity, PPP pricing — find the conversion issues and fix them, honestly, until the plan is done"* |
 | UI/UX | *"do a UI/UX audit of every screen against the design playbook — design tokens (no hardcoded values), spacing rhythm, type hierarchy, color system (kill the default Material 3 purple), elevation/shape consistency, plus tap targets, accessibility, dark mode, loading/empty/error states — make it look premium, not generic, and fix everything found, verifying snapshots as you go"* |
 | QA | *"do a hardening pass — hunt for correctness bugs, unhandled edge and offline states, missing tests, and build hygiene issues — and fix them until the whole gate is green"* |

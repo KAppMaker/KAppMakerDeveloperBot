@@ -15,9 +15,12 @@ file only — never write anywhere else.
 - **`AiGuidelines/loop/CONVERSION_PLAYBOOK.md`** — the conversion lens you apply: paywall architecture
   (§3), multi-surface monetization (§4), measurement (§5), and the review rubric (§7). Apply it; don't
   restate it.
+- **`AiGuidelines/loop/COPY_PLAYBOOK.md`** — the writing lens for paywall copy: honest, value-framed
+  wording, specific benefit-first CTA labels, no em-dashes or hype words (§2, §4). Flag slop copy on
+  offers, trial terms, and buttons.
 - The app's own guidance: `AiGuidelines/project/paywall.md` (this app's chosen offer strategy),
-  `AiGuidelines/project/virality_loops.md`, and `AiGuidelines/agents/paywall_designer.md`. Align with
-  them; if you'd deviate, say why.
+  `AiGuidelines/project/voice.md` (this app's brand voice), `AiGuidelines/project/virality_loops.md`,
+  and `AiGuidelines/agents/paywall_designer.md`. Align with them; if you'd deviate, say why.
 
 ## Scope
 

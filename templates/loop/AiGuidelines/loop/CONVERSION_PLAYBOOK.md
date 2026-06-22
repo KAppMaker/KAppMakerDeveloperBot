@@ -69,7 +69,8 @@ Reference frameworks (toolkit, not mandates):
   for considered purchases. Recommend per app and **state the trial terms honestly** ("3 days free,
   then $X/yr. Cancel anytime.").
 - **CTA clarity:** one primary action, benefit-oriented label (not a bare "Subscribe"), no decision
-  paralysis. Legal/renewal terms visible but not shouting.
+  paralysis. Legal/renewal terms visible but not shouting. (For voice and microcopy — labels,
+  headlines, honest trial wording, no em-dashes or hype words — see `COPY_PLAYBOOK.md`.)
 - **Credit-packs:** clear per-unit value, sensible (honest) anchoring — highlight the genuine
   best-value pack, never a fake one; correct PPP (purchasing-power) pricing per region.
 - **Subscription vs credit-pack:** decide which the first paywall leads with and why (see the app's
