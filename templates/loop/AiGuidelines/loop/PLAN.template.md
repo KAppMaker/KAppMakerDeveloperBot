@@ -9,10 +9,11 @@
 >
 > Ground items in the playbooks: `AiGuidelines/loop/CONVERSION_PLAYBOOK.md` (conversion),
 > `AiGuidelines/loop/GROWTH_PLAYBOOK.md` (growth/virality), `AiGuidelines/loop/DESIGN_PLAYBOOK.md`
-> (visual craft — any `ui-ux`-tagged item), and `AiGuidelines/loop/COPY_PLAYBOOK.md` (voice &
-> microcopy — any item that writes user-facing text). Order by expected metric impact (goal capture &
-> surfacing usually first), not by screen order. The example items below are a starting point —
-> replace/reorder them for the actual `<goal>`.
+> (visual craft — any `ui-ux`-tagged item), `AiGuidelines/loop/COPY_PLAYBOOK.md` (voice & microcopy
+> — any item that writes user-facing text), and `AiGuidelines/loop/QA_PLAYBOOK.md` (correctness &
+> build safety — any `qa`-tagged item). Order by expected metric impact (goal capture & surfacing
+> usually first), not by screen order. The example items below are a starting point — replace/reorder
+> them for the actual `<goal>`.
 
 **North-star:** subscription free→paid AND credit-pack purchase conversion (ethical means only).
 
@@ -44,7 +45,8 @@
       elevation/shape consistent — run the anti-slop checklist (§11) `[ui-ux]`
 - [ ] Tap-target + accessibility pass (contrast, labels, dynamic type, design playbook) on changed
       screens `[ui-ux]`
-- [ ] Cover error / offline / empty states for changed flows `[qa]`
+- [ ] Cover the five states (loading/content/empty/error/offline) for changed flows and add the
+      missing-coverage tests (QA playbook §2, §6) `[qa]`
 - [ ] Add/refresh Roborazzi snapshot coverage for changed screens (record deliberately) `[qa, ui-ux]`
 - [ ] Add one cheap delight pass to the highest-traffic hero moment (haptic on success,
       micro-animation) `[delight, ui-ux]`

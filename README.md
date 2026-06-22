@@ -441,7 +441,7 @@ orchestrator alone:
 | `onboarding-specialist` | First impression: copy quality (human voice, no jargon/em-dashes, a hook that attracts), activation, time-to-value, signup/permission friction |
 | `paywall-conversion-specialist` | Subscription + credit-pack conversion, trial framing, pricing (ethical) |
 | `ui-ux-reviewer` | Compose UI visual craft (design tokens, spacing, type hierarchy, color system) + tap targets, accessibility, dark mode, snapshot impact |
-| `qa-engineer` | Kotlin/coroutine correctness, edge cases, missing tests, build safety |
+| `qa-engineer` | Kotlin/coroutine correctness, the five states (loading/content/empty/error/offline), KMP gotchas, missing tests, build safety — the one specialist empowered to `block` |
 | `growth-virality-specialist` | Share/referral loops, ratings timing, deep links, k-factor (ethical — no spam) |
 | `delight-specialist` | Haptics, micro-interactions, motion polish, premium feel |
 

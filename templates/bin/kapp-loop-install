@@ -42,6 +42,7 @@ cp "$TEMPLATE/AiGuidelines/loop/CONVERSION_PLAYBOOK.md" "$APP_DIR/AiGuidelines/l
 cp "$TEMPLATE/AiGuidelines/loop/GROWTH_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/GROWTH_PLAYBOOK.md"
 cp "$TEMPLATE/AiGuidelines/loop/DESIGN_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/DESIGN_PLAYBOOK.md"
 cp "$TEMPLATE/AiGuidelines/loop/COPY_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/COPY_PLAYBOOK.md"
+cp "$TEMPLATE/AiGuidelines/loop/QA_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/QA_PLAYBOOK.md"
 
 # --- runtime working data -> .loop/ (generated logs/output, kept out of AiGuidelines) ---
 mkdir -p "$APP_DIR/.loop/reviews" "$APP_DIR/.loop/reports"
