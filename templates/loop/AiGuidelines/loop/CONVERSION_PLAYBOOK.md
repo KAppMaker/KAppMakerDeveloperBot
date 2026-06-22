@@ -76,6 +76,26 @@ Reference frameworks (toolkit, not mandates):
 - **Subscription vs credit-pack:** decide which the first paywall leads with and why (see the app's
   `paywall.md`); don't present both with equal weight if one is the primary model.
 
+### 3.1 Trust & credibility on the paywall
+
+The paywall has to feel safe to say yes to. A wall that looks cheap or shady tanks conversion no
+matter how good the offer is — so trust is a conversion lever, not just an ethics footnote. Build it
+with honest signals only:
+
+- **Honest social proof.** Real ratings, real review counts, real testimonials — sourced and true.
+  Never fabricate a number or invent a personal claim ("12 of your friends joined"). If you can't
+  verify it, don't show it.
+- **Value recap before the price.** Show what the user gets, in their own goal's terms, *before* the
+  amount and the buy button. A price with no justification reads as a demand.
+- **Transparent pricing & renewal.** State the price, billing period, what happens when the trial
+  ends, and the renewal cadence plainly and visibly ("3 days free, then $39.99/year. Cancel
+  anytime."). No surprise charges, nothing hidden in fine print or off-screen.
+- **Visible restore purchases** and **linked Terms & Privacy.** Required by the stores and real trust
+  signals; their absence makes the paywall feel risky.
+- **Plain reassurance, not pressure.** "Secure payment" and an honest "cancel anytime" build
+  confidence. A dark pattern reframed as a "trust signal" (fake urgency, a countdown dressed as
+  scarcity) is still a dark pattern — see §6.
+
 ---
 
 ## 4. Multi-surface monetization

@@ -31,6 +31,12 @@ then spacing rhythm, type hierarchy, color system (replace the default Material 
 elevation/shape consistency, and the hero moments. This is the lens that keeps generated UI from
 looking like generic "AI slop"; ground UI work in it at build time, not just at review.
 
+When the goal is **quality/hardening** (correctness, tests, edge/offline states, build safety), also
+read `AiGuidelines/loop/QA_PLAYBOOK.md` and decompose `PLAN.md` along its levers — structured
+concurrency, the five required states (loading/content/empty/error/offline), KMP `expect`/`actual`
+completeness, the repository boundary, and test/snapshot hygiene. The same playbook is the bar every
+change is held to at the verification gate, so build to it.
+
 ## What you do each iteration
 
 1. **Plan / maintain `PLAN.md`.** Turn the human's goal into small, independently verifiable
