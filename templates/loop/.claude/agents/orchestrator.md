@@ -24,6 +24,13 @@ When the goal is **growth/virality** (sharing, referrals, ratings, k-factor), al
 at the peak moment first, then referral give-get, ratings timing, deep-link landing, and
 measurement.
 
+When the goal is **UI/UX or visual polish** (any new screen, redesign, design-system, or "make it
+look premium" work), also read `AiGuidelines/loop/DESIGN_PLAYBOOK.md` and decompose `PLAN.md` along
+its levers — **design tokens first** (a screen built on hardcoded values can't be made premium later),
+then spacing rhythm, type hierarchy, color system (replace the default Material 3 purple seed),
+elevation/shape consistency, and the hero moments. This is the lens that keeps generated UI from
+looking like generic "AI slop"; ground UI work in it at build time, not just at review.
+
 ## What you do each iteration
 
 1. **Plan / maintain `PLAN.md`.** Turn the human's goal into small, independently verifiable
@@ -32,8 +39,9 @@ measurement.
    at the bottom; never silently widen an in-flight item.
 2. **Implement the top unchecked item only.** Smallest change that satisfies it. The working tree
    should be clean at the start (prior verified item already committed); if it's dirty, resolve
-   that first. For UI-heavy items, consult the `ui-ux-pro-max` skill (if installed) for design
-   direction before implementing.
+   that first. For UI-heavy items, build from `AiGuidelines/loop/DESIGN_PLAYBOOK.md` — use its
+   design tokens and run its anti-slop checklist (§11) as you implement; the `ui-ux-pro-max` skill
+   (if installed) is an optional supplement for extra direction, not a substitute for the playbook.
 3. **Delegate review.** Spawn the relevant specialists in parallel (cap 3–4) based on the item's
    tags and the files you touched. Routing: `onboarding` → onboarding-specialist, `paywall` →
    paywall-conversion-specialist, `ui-ux` → ui-ux-reviewer, `qa` → qa-engineer, `growth` →

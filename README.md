@@ -440,7 +440,7 @@ orchestrator alone:
 | `orchestrator` | Owns `PLAN.md`, delegates, decides what to apply, enforces the gate |
 | `onboarding-specialist` | First-run activation, time-to-value, signup/permission friction |
 | `paywall-conversion-specialist` | Subscription + credit-pack conversion, trial framing, pricing (ethical) |
-| `ui-ux-reviewer` | Compose UI: tap targets, accessibility, dark mode, snapshot impact |
+| `ui-ux-reviewer` | Compose UI visual craft (design tokens, spacing, type hierarchy, color system) + tap targets, accessibility, dark mode, snapshot impact |
 | `qa-engineer` | Kotlin/coroutine correctness, edge cases, missing tests, build safety |
 | `growth-virality-specialist` | Share/referral loops, ratings timing, deep links, k-factor (ethical — no spam) |
 | `delight-specialist` | Haptics, micro-interactions, motion polish, premium feel |
@@ -455,7 +455,7 @@ verified change at a time (`qa-engineer` still reviews anything risky):
 |---|---|
 | Onboarding | *"audit the onboarding flow — goal capture, time-to-value, permission priming, friction — turn every finding into a plan item and fix them until activation is as good as it gets"* |
 | Paywall | *"audit the paywall and credit packs — timing, offer architecture, trial framing, CTA clarity, PPP pricing — find the conversion issues and fix them, honestly, until the plan is done"* |
-| UI/UX | *"do a UI/UX audit of every screen — tap targets, accessibility, dark mode, loading/empty/error states, platform conventions — and fix everything found, verifying snapshots as you go"* |
+| UI/UX | *"do a UI/UX audit of every screen against the design playbook — design tokens (no hardcoded values), spacing rhythm, type hierarchy, color system (kill the default Material 3 purple), elevation/shape consistency, plus tap targets, accessibility, dark mode, loading/empty/error states — make it look premium, not generic, and fix everything found, verifying snapshots as you go"* |
 | QA | *"do a hardening pass — hunt for correctness bugs, unhandled edge and offline states, missing tests, and build hygiene issues — and fix them until the whole gate is green"* |
 | Growth | *"audit the growth loops — shareable moments, referral structure, ratings-prompt timing, deep links, k-factor events — find what's missing or broken and build/fix it until done"* |
 | Delight | *"do a delight pass — find every place the app feels cheap or default, then add the polish: haptics on success, motion at hero moments, loading and empty states with personality — small verified changes until it feels premium"* |
