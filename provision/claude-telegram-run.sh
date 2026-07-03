@@ -18,6 +18,12 @@ CLAUDE_CONFIG_DIR="$HOME/.claude"
 TELEGRAM_ENV="$HOME/.claude/channels/telegram/.env"
 TELEGRAM_CHANNEL="plugin:telegram@claude-plugins-official"
 PROJECTS_DIR="$HOME/projects"
+KAPP_ENV="$HOME/.config/kappmaker/env"
+SETUP_SENT_MARKER="$HOME/.config/kappmaker/.setup-complete-sent"
+
+# Control-plane callback URL persisted by bootstrap.sh (signed, secret-free).
+# shellcheck disable=SC1090
+[[ -f "$KAPP_ENV" ]] && source "$KAPP_ENV"
 
 have_claude_login() {
   # Claude stores subscription auth under ~/.claude after `claude` login.
@@ -36,6 +42,39 @@ if ! have_claude_login || ! have_telegram_token; then
 fi
 
 cd "$PROJECTS_DIR" || exit 1
+
+# First start with the customer's creds in place: tell the control plane setup
+# is done (flips the dashboard to Active). One-shot via marker; carries only the
+# lifecycle state + the PUBLIC bot username (for the "Open your bot" button).
+# The bot token itself never leaves this box.
+if [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$SETUP_SENT_MARKER" ]]; then
+  BOT_USERNAME=""
+  # Pure-bash read: the token never appears in any subprocess argv (ps-safe).
+  TG_TOKEN=""
+  while IFS= read -r line; do
+    case "$line" in
+      TELEGRAM_BOT_TOKEN=*)
+        TG_TOKEN="${line#TELEGRAM_BOT_TOKEN=}"
+        TG_TOKEN="${TG_TOKEN%\"}"; TG_TOKEN="${TG_TOKEN#\"}"
+        break;;
+    esac
+  done < "$TELEGRAM_ENV"
+  if [[ -n "$TG_TOKEN" ]]; then
+    BOT_USERNAME="$(curl -fsS "https://api.telegram.org/bot${TG_TOKEN}/getMe" 2>/dev/null \
+      | sed -n 's/.*"username":"\([A-Za-z0-9_]*\)".*/\1/p')"
+  fi
+  unset TG_TOKEN
+
+  if curl -fsS -X POST "$SERVER_CALLBACK_URL" \
+      --data-urlencode "state=setup_complete" \
+      --data-urlencode "message=customer setup complete" \
+      ${BOT_USERNAME:+--data-urlencode "bot_username=$BOT_USERNAME"} \
+      >/dev/null 2>&1; then
+    touch "$SETUP_SENT_MARKER"
+  else
+    echo "[claude-telegram] setup_complete callback failed — will retry on next start."
+  fi
+fi
 
 # --dangerously-skip-permissions enables hands-off Telegram operation. Safe only
 # because the box is locked down to the owner (see hardening in bootstrap.sh).
