@@ -66,8 +66,13 @@ apt-get install -y curl wget git sudo ufw fail2ban unattended-upgrades
 
 # ---------- 2. non-root sudo user ----------
 log "Creating non-root user: $DEVUSER"
+# Hetzner images created without ssh_keys ship an EXPIRED root password, which
+# makes PAM fail adduser's chfn step ("authentication token is no longer
+# valid"). Unexpire root and use useradd (no chfn involved) — both harmless
+# when the image is healthy.
+chage -d "$(date +%Y-%m-%d)" -M -1 root 2>/dev/null || true
 if ! id "$DEVUSER" >/dev/null 2>&1; then
-  adduser --disabled-password --gecos "" "$DEVUSER"
+  useradd -m -s /bin/bash "$DEVUSER"
 fi
 usermod -aG sudo "$DEVUSER"
 # Passwordless sudo: required for hands-off --dangerously-skip-permissions operation.
