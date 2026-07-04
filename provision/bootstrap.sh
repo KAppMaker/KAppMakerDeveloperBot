@@ -126,12 +126,18 @@ install -d -o "$DEVUSER" -g "$DEVUSER" "/home/$DEVUSER/bin"
 # "setup_complete" to the control plane once the customer finishes setup.
 if [[ -n "$SERVER_CALLBACK_URL" || -n "${SERVER_KEY_URL:-}" ]]; then
   install -d -o "$DEVUSER" -g "$DEVUSER" "/home/$DEVUSER/.config/kappmaker"
+  KAPP_ENV_FILE="/home/$DEVUSER/.config/kappmaker/env"
+  # MERGE, never truncate: setup-vps.sh stores the toolchain env (JAVA_HOME,
+  # ANDROID_SDK_ROOT, PATH…) in this same file — clobbering it would strip the
+  # build tools from claude-telegram.service's environment.
+  touch "$KAPP_ENV_FILE"
+  sed -i '/^SERVER_CALLBACK_URL=/d; /^SERVER_KEY_URL=/d' "$KAPP_ENV_FILE"
   {
     [[ -n "$SERVER_CALLBACK_URL" ]] && printf 'SERVER_CALLBACK_URL=%q\n' "$SERVER_CALLBACK_URL"
     [[ -n "${SERVER_KEY_URL:-}" ]] && printf 'SERVER_KEY_URL=%q\n' "${SERVER_KEY_URL:-}"
-  } > "/home/$DEVUSER/.config/kappmaker/env"
-  chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/.config/kappmaker/env"
-  chmod 600 "/home/$DEVUSER/.config/kappmaker/env"
+  } >> "$KAPP_ENV_FILE"
+  chown "$DEVUSER:$DEVUSER" "$KAPP_ENV_FILE"
+  chmod 600 "$KAPP_ENV_FILE"
 fi
 curl -fsSL "$PROVISION_BASE_URL/claude-telegram-run.sh" -o "/home/$DEVUSER/bin/claude-telegram-run.sh"
 chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/bin/claude-telegram-run.sh"
