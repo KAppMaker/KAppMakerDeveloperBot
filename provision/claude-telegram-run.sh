@@ -34,6 +34,28 @@ have_telegram_token() {
   [[ -f "$TELEGRAM_ENV" ]] && grep -qs "TELEGRAM_BOT_TOKEN=..*" "$TELEGRAM_ENV"
 }
 
+# Pull the customer's current PUBLIC ssh key from the control plane (signed
+# URL, no secret) and install it — so a key added in the dashboard opens the
+# box within one restart cycle, without a rebuild. Strictly validated: only a
+# plain "type base64" line is ever written.
+sync_customer_key() {
+  [[ -n "${SERVER_KEY_URL:-}" ]] || return 0
+
+  local key
+  key="$(curl -fsS --max-time 10 "$SERVER_KEY_URL" 2>/dev/null | head -n 1)" || return 0
+
+  [[ "$key" =~ ^(ssh-(rsa|ed25519)|ecdsa-sha2-[a-z0-9-]+)\ [A-Za-z0-9+/=]+$ ]] || return 0
+
+  install -d -m 700 "$HOME/.ssh"
+  if ! grep -qsF "$key" "$HOME/.ssh/authorized_keys" 2>/dev/null; then
+    printf '%s\n' "$key" >> "$HOME/.ssh/authorized_keys"
+    chmod 600 "$HOME/.ssh/authorized_keys"
+    echo "[claude-telegram] Installed the customer's ssh key from the dashboard."
+  fi
+}
+
+sync_customer_key
+
 if ! have_claude_login || ! have_telegram_token; then
   echo "[claude-telegram] Setup not finished yet (Claude login and/or Telegram token missing)."
   echo "[claude-telegram] Waiting — will start automatically once setup is complete."

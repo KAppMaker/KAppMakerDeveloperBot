@@ -16,6 +16,9 @@
 #   SETUP_VPS_URL       URL of setup-vps.sh to run         (default: GitHub raw main)
 #   PROVISION_BASE_URL  base URL for the provision/ files  (default: GitHub raw main)
 #   SERVER_CALLBACK_URL signed control-plane callback URL  (optional)
+#   SERVER_KEY_URL      signed URL returning the customer's current PUBLIC
+#                       ssh key — polled by the runner so a key added in the
+#                       dashboard works without a rebuild (optional)
 #   CUSTOMER_SSH_KEY    customer's PUBLIC ssh key — installed for DEVUSER so the
 #                       customer can log in for the one-time setup (optional)
 
@@ -33,6 +36,7 @@ RAW_BASE="https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main
 SETUP_VPS_URL="${SETUP_VPS_URL:-$RAW_BASE/setup-vps.sh}"
 PROVISION_BASE_URL="${PROVISION_BASE_URL:-$RAW_BASE/provision}"
 SERVER_CALLBACK_URL="${SERVER_CALLBACK_URL:-}"
+SERVER_KEY_URL="${SERVER_KEY_URL:-}"
 CUSTOMER_SSH_KEY="${CUSTOMER_SSH_KEY:-}"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -114,9 +118,12 @@ install -d -o "$DEVUSER" -g "$DEVUSER" "/home/$DEVUSER/bin"
 
 # Persist the (secret-free, signed) callback URL so the runner can report
 # "setup_complete" to the control plane once the customer finishes setup.
-if [[ -n "$SERVER_CALLBACK_URL" ]]; then
+if [[ -n "$SERVER_CALLBACK_URL" || -n "${SERVER_KEY_URL:-}" ]]; then
   install -d -o "$DEVUSER" -g "$DEVUSER" "/home/$DEVUSER/.config/kappmaker"
-  printf 'SERVER_CALLBACK_URL=%q\n' "$SERVER_CALLBACK_URL" > "/home/$DEVUSER/.config/kappmaker/env"
+  {
+    [[ -n "$SERVER_CALLBACK_URL" ]] && printf 'SERVER_CALLBACK_URL=%q\n' "$SERVER_CALLBACK_URL"
+    [[ -n "${SERVER_KEY_URL:-}" ]] && printf 'SERVER_KEY_URL=%q\n' "${SERVER_KEY_URL:-}"
+  } > "/home/$DEVUSER/.config/kappmaker/env"
   chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/.config/kappmaker/env"
   chmod 600 "/home/$DEVUSER/.config/kappmaker/env"
 fi
