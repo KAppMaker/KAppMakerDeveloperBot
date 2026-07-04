@@ -63,6 +63,15 @@ if ! have_claude_login || ! have_telegram_token; then
   exit 1
 fi
 
+# Setup is done → tear down the one-time browser-setup terminal (ttyd + Caddy)
+# and close its firewall ports. One-shot: the teardown writes
+# /etc/kappmaker/.setup-done, so this guard skips forever after. Passwordless
+# sudo is granted to this user by bootstrap.sh; -n = never prompt.
+if [[ -x /usr/local/bin/kappmaker-setup-teardown && ! -f /etc/kappmaker/.setup-done ]]; then
+  sudo -n /usr/local/bin/kappmaker-setup-teardown \
+    || echo "[claude-telegram] Browser-setup teardown failed — will retry on next start."
+fi
+
 cd "$PROJECTS_DIR" || exit 1
 
 # First start with the customer's creds in place: tell the control plane setup
