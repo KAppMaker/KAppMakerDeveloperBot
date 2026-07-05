@@ -1,0 +1,12 @@
+# KAppMaker AI — browser-setup auto-expiry (oneshot, fired by setup-expiry.timer).
+# Installed by provision/bootstrap.sh; __DEVUSER__ replaced at install time.
+# Tears down the one-time setup terminal 48h after boot if setup never finished.
+
+[Unit]
+Description=KAppMaker AI — expire the one-time browser setup terminal
+ConditionPathExists=!/etc/kappmaker/.setup-done
+
+[Service]
+Type=oneshot
+Environment=DEVUSER=__DEVUSER__
+ExecStart=/usr/local/bin/kappmaker-setup-expire

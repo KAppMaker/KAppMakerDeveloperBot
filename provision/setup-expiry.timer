@@ -1,0 +1,13 @@
+# KAppMaker AI — fires setup-expiry.service 48h after boot to close the
+# one-time browser-setup terminal if the customer never finished setup.
+# Persistent so a box that's off at the 48h mark still expires on next boot.
+
+[Unit]
+Description=KAppMaker AI — auto-expire the browser setup terminal after 48h
+
+[Timer]
+OnBootSec=48h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

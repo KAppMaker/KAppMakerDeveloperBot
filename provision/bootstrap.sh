@@ -227,11 +227,19 @@ else
 
   curl -fsSL "$PROVISION_BASE_URL/setup-teardown.sh" -o /usr/local/bin/kappmaker-setup-teardown
   chmod 755 /usr/local/bin/kappmaker-setup-teardown
+  curl -fsSL "$PROVISION_BASE_URL/setup-expire.sh" -o /usr/local/bin/kappmaker-setup-expire
+  chmod 755 /usr/local/bin/kappmaker-setup-expire
 
   TMP_UNIT="$(mktemp)"
   curl -fsSL "$PROVISION_BASE_URL/setup-web.service" -o "$TMP_UNIT"
   sed "s/__DEVUSER__/$DEVUSER/g" "$TMP_UNIT" > /etc/systemd/system/setup-web.service
   rm -f "$TMP_UNIT"
+
+  # 48h auto-expiry: if the customer never finishes setup, close the browser
+  # terminal (and tell the control plane) so it can't linger open forever.
+  curl -fsSL "$PROVISION_BASE_URL/setup-expiry.service" -o "$TMP_UNIT" 2>/dev/null \
+    && sed "s/__DEVUSER__/$DEVUSER/g" "$TMP_UNIT" > /etc/systemd/system/setup-expiry.service
+  curl -fsSL "$PROVISION_BASE_URL/setup-expiry.timer" -o /etc/systemd/system/setup-expiry.timer 2>/dev/null || true
 
   # Public IPv4 → sslip.io hostname. Hetzner metadata first, generic fallback.
   SETUP_IP="$(curl -fsS --max-time 5 http://169.254.169.254/hetzner/v1/metadata/public-ipv4 2>/dev/null || true)"
@@ -259,6 +267,8 @@ CADDY
     systemctl enable --now setup-web.service
     systemctl enable caddy.service >/dev/null 2>&1 || true
     systemctl restart caddy.service
+    # Start the 48h expiry countdown (harmless if the unit files are absent).
+    systemctl enable --now setup-expiry.timer >/dev/null 2>&1 || true
 
     SETUP_URL="https://$SETUP_HOST/"
     log "Browser setup live at $SETUP_URL (user: setup)"
