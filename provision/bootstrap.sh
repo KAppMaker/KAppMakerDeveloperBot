@@ -95,7 +95,7 @@ fi
 log "Installing toolchain via setup-vps.sh as $DEVUSER (non-interactive)"
 TMP_SETUP="$(mktemp --suffix=.sh)"
 curl -fsSL "$SETUP_VPS_URL" -o "$TMP_SETUP"
-chmod +x "$TMP_SETUP"
+chmod 755 "$TMP_SETUP"  # a+rx: mktemp gives 0600 root — devuser must be able to read it
 sudo -u "$DEVUSER" -H env KAPP_NONINTERACTIVE=1 KAPP_SKIP_LOOP=1 bash "$TMP_SETUP"
 rm -f "$TMP_SETUP"
 
