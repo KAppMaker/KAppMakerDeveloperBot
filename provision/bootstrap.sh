@@ -204,6 +204,12 @@ elif ! apt-get install -y ttyd caddy openssl; then
 else
   log "Installing one-time browser-setup terminal (ttyd + Caddy)"
 
+  # The ttyd apt package ships an ENABLED /lib/systemd/system/ttyd.service that
+  # runs a login shell on 127.0.0.1:7681. Left alone it (a) squats the port our
+  # setup-web unit needs and (b) would be the thing Caddy exposes publicly — a
+  # login shell instead of our credential-gated wizard. Kill it before ours.
+  systemctl disable --now ttyd 2>/dev/null || true
+
   # Random access code = the basic-auth password (user is always "setup").
   # Reused across re-runs so a URL/code already shown to the customer stays valid.
   install -d -m 755 /etc/kappmaker
