@@ -17,6 +17,19 @@ log()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[err]\033[0m  %s\n' "$*" >&2; exit 1; }
 
+# progress <percent> <step>: report a REAL sub-step of the toolchain install to
+# the control plane so the customer's progress bar actually moves during this
+# long phase. Best-effort + non-blocking (SERVER_CALLBACK_URL passed in by
+# bootstrap.sh; absent when run standalone → no-op).
+progress() {
+  [[ -n "${SERVER_CALLBACK_URL:-}" ]] || return 0
+  curl -fsS --max-time 8 -X POST "$SERVER_CALLBACK_URL" \
+    --data-urlencode "state=progress" \
+    --data-urlencode "percent=$1" \
+    --data-urlencode "step=$2" \
+    >/dev/null 2>&1 || true
+}
+
 # ---------- 0. sanity ----------
 command -v apt-get >/dev/null || die "This script targets Debian/Ubuntu (apt-get not found)."
 
@@ -52,6 +65,7 @@ $SUDO apt-get install -y \
   software-properties-common
 
 # ---------- 2. JDK 17 (Temurin) ----------
+progress 34 "Installing Java (for Android builds)"
 log "Installing JDK 17"
 if ! java -version 2>&1 | grep -q '"17\.'; then
   $SUDO mkdir -p /etc/apt/keyrings
@@ -69,6 +83,7 @@ export JAVA_HOME PATH="$JAVA_HOME/bin:$PATH"
 
 # ---------- 3. Android SDK ----------
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/android-sdk}"
+progress 40 "Installing the Android SDK (the big one — a few minutes)"
 log "Installing Android SDK at $ANDROID_SDK_ROOT"
 if [[ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]]; then
   mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
@@ -88,6 +103,7 @@ sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0
 # ---------- 4. Gradle ----------
 GRADLE_VERSION="9.4.1"
 GRADLE_DIR="/opt/gradle-${GRADLE_VERSION}"
+progress 52 "Installing Gradle (build system)"
 log "Installing Gradle ${GRADLE_VERSION}"
 if [[ ! -d "$GRADLE_DIR" ]]; then
   TMP_ZIP="$(mktemp --suffix=.zip)"
@@ -98,6 +114,7 @@ fi
 export PATH="$GRADLE_DIR/bin:$PATH"
 
 # ---------- 5. Node.js 22 ----------
+progress 58 "Installing Node.js"
 log "Installing Node.js 22"
 if ! command -v node >/dev/null || ! node --version | grep -q '^v22'; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO_E bash -
@@ -113,10 +130,12 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # ---------- 7. Claude Code ----------
+progress 63 "Installing Claude Code"
 log "Installing Claude Code (global npm)"
 $SUDO npm install -g @anthropic-ai/claude-code
 
 # ---------- 8. KAppMaker CLI ----------
+progress 66 "Installing the KAppMaker app builder"
 log "Installing KAppMaker CLI (global npm)"
 $SUDO npm install -g kappmaker
 
