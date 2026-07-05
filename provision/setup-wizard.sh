@@ -167,7 +167,19 @@ say ""
 say "  ${BOLD}Next:${RESET} open Telegram, find ${BOLD}@${BOT_USERNAME:-your bot}${RESET}, and say hi."
 say "  It will introduce itself and ask about the app you want to build."
 say ""
-say "${DIM}This setup page will switch itself off in a moment — that's normal"
-say "and means everything worked. You can close this tab.${RESET}"
+say "${DIM}This setup page is switching itself off now — that's normal and means"
+say "everything worked. You can close this tab.${RESET}"
 say ""
+
+# Start the always-on bot and shut the setup page down IMMEDIATELY, so this
+# terminal doesn't respawn (ttyd would otherwise re-run the wizard on the
+# browser's auto-reconnect, looking like an endless refresh loop). Run it in a
+# detached transient unit: stopping setup-web kills this wizard's process tree,
+# so the teardown must live outside it to finish. devuser has passwordless sudo.
+sudo -n systemd-run --quiet --collect --unit kappmaker-finish-setup \
+  /bin/bash -c 'sleep 2; systemctl restart claude-telegram.service 2>/dev/null; /usr/local/bin/kappmaker-setup-teardown' \
+  2>/dev/null \
+  || sudo -n /bin/bash -c '( sleep 2; systemctl restart claude-telegram.service; /usr/local/bin/kappmaker-setup-teardown ) >/dev/null 2>&1 &' 2>/dev/null \
+  || true
+
 exit 0
