@@ -50,7 +50,9 @@ oops() { printf '%s✗ %s%s\n' "$RED" "$*" "$RESET"; }
 trap 'printf "\n%sSetup paused — just reload this page to pick up where you left off.%s\n" "$YELLOW" "$RESET"; exit 130' INT
 
 # Same detection logic as claude-telegram-run.sh — keep the three in sync.
-have_claude_login()   { [[ -f "$CLAUDE_CREDS" ]] || grep -rqs "oauth" "$CLAUDE_CONFIG_DIR" 2>/dev/null; }
+# Real login artifact ONLY. A recursive grep for "oauth" would match the Telegram
+# plugin's node_modules and falsely report "signed in", skipping Step 1.
+have_claude_login()   { [[ -s "$CLAUDE_CREDS" ]]; }
 have_telegram_token() { [[ -f "$TELEGRAM_ENV" ]] && grep -qs "TELEGRAM_BOT_TOKEN=..*" "$TELEGRAM_ENV"; }
 # Paired = the customer's Telegram account is on the allowlist. Until then the
 # bot only hands out pairing codes; nobody can reach the assistant.

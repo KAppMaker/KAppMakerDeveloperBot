@@ -27,8 +27,12 @@ SETUP_SENT_MARKER="$HOME/.config/kappmaker/.setup-complete-sent"
 [[ -f "$KAPP_ENV" ]] && source "$KAPP_ENV"
 
 have_claude_login() {
-  # Claude stores subscription auth under ~/.claude after `claude` login.
-  [[ -f "$CLAUDE_CREDS" ]] || grep -rqs "oauth" "$CLAUDE_CONFIG_DIR" 2>/dev/null
+  # Real login artifact ONLY: ~/.claude/.credentials.json (written after `claude`
+  # OAuth login). Do NOT fall back to `grep -r oauth ~/.claude` — the Telegram
+  # channel plugin's node_modules (pkce-challenge, jose, MCP SDK auth) contain
+  # that string, so the grep gives a false positive and would start the bot (and
+  # make the wizard skip the sign-in step) before the customer has logged in.
+  [[ -s "$CLAUDE_CREDS" ]]
 }
 
 have_telegram_token() {
@@ -132,10 +136,16 @@ if have_paired; then
   fi
 fi
 
-# --dangerously-skip-permissions enables hands-off Telegram operation. Safe only
-# because the box is locked down to the owner (see hardening in bootstrap.sh).
-# Starts the Telegram MCP server (the bot goes online); until the customer is
-# paired it will only hand out pairing codes, never reach the assistant.
-exec claude \
-  --channels "$TELEGRAM_CHANNEL" \
-  --dangerously-skip-permissions
+# Start the always-on channel session. claude NEEDS A TTY to run interactively;
+# under systemd there is none, so it falls back to --print mode and dies with
+# "Input must be provided either through stdin or as a prompt argument". We give
+# it a PTY via python's pty.spawn so it runs as a normal interactive session —
+# which is what actually activates the Telegram channel listener.
+#
+# --dangerously-skip-permissions enables hands-off operation (safe: the box is
+# locked to the owner; the one-time bypass warning is pre-accepted at provision
+# via ~/.claude/settings.json "skipDangerousModePermissionPrompt", alongside the
+# theme + folder-trust flags — otherwise those prompts would block a headless
+# start). Until the customer is paired the bot only hands out pairing codes.
+exec python3 -c 'import pty, sys; pty.spawn(sys.argv[1:])' \
+  claude --channels "$TELEGRAM_CHANNEL" --dangerously-skip-permissions

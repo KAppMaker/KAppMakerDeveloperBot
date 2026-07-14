@@ -274,6 +274,41 @@ else
   warn "claude CLI not on PATH — skipping plugin install (Telegram channel won't load until installed)."
 fi
 
+# ---------- 9c5. Claude first-run flags (headless-friendly) ----------
+# The always-on bot runs `claude` with NO TTY. claude's one-time interactive
+# prompts — the theme picker, the folder-trust "do you trust this folder?", and
+# the --dangerously-skip-permissions bypass warning — would each block a headless
+# start forever (the channel never comes online). Pre-accept all three so the
+# service starts clean. The customer's LOGIN is deliberately NOT seeded here —
+# that's theirs to do interactively in the setup wizard.
+log "Seeding Claude first-run flags for headless operation"
+mkdir -p "$HOME/projects" "$HOME/.claude"
+python3 - <<'PY' || warn "Could not seed Claude first-run flags — a headless start may hit a prompt."
+import json, os
+# settings.json — skip the bypass-permissions warning. MERGE (preserve the
+# session-history Stop hook + enabledPlugins written earlier).
+sf = os.path.expanduser("~/.claude/settings.json")
+try:
+    s = json.load(open(sf))
+except Exception:
+    s = {}
+s["skipDangerousModePermissionPrompt"] = True
+json.dump(s, open(sf, "w"), indent=2)
+# ~/.claude.json — theme (skips the picker), onboarding done, and trust for the
+# projects workspace the bot runs in.
+cf = os.path.expanduser("~/.claude.json")
+try:
+    d = json.load(open(cf))
+except Exception:
+    d = {}
+d.setdefault("theme", "dark")
+d["hasCompletedOnboarding"] = True
+proj = os.path.expanduser("~/projects")
+d.setdefault("projects", {}).setdefault(proj, {})["hasTrustDialogAccepted"] = True
+json.dump(d, open(cf, "w"), indent=2)
+print("seeded Claude first-run flags")
+PY
+
 # ---------- 9d. self-improve loop template + installer ----------
 # The loop is an OPT-IN scaffold: deployed here, installed per-app with `kapp-loop-install`,
 # and OFF until a human triggers it. We fetch the repo tarball and extract the two pieces.
