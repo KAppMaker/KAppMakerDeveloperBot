@@ -192,6 +192,30 @@ json.dump(a, open(sys.argv[1], "w"), indent=2)
 PY
 }
 
+# Finish setup: tell the control plane (once) that setup is complete, then shut
+# the browser-setup terminal down. Idempotent — safe to call from the normal
+# completion path AND from the "already set up" early-exit (e.g. a page reload
+# after pairing), so the page always tears itself down no matter how it's
+# reached. Detached: stopping setup-web kills this wizard's own process tree, so
+# the teardown must run in a transient unit that outlives it.
+finalize_setup() {
+  local marker="$HOME/.config/kappmaker/.setup-complete-sent"
+  if [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$marker" ]]; then
+    if curl -fsS --max-time 15 -X POST "$SERVER_CALLBACK_URL" \
+        --data-urlencode "state=setup_complete" \
+        --data-urlencode "message=customer setup complete" \
+        ${BOT_USERNAME:+--data-urlencode "bot_username=$BOT_USERNAME"} \
+        >/dev/null 2>&1; then
+      mkdir -p "$(dirname "$marker")" && touch "$marker"
+    fi
+  fi
+  sudo -n systemd-run --quiet --collect --unit kappmaker-finish-setup \
+    /bin/bash -c 'sleep 2; /usr/local/bin/kappmaker-setup-teardown' \
+    2>/dev/null \
+    || sudo -n /bin/bash -c '( sleep 2; /usr/local/bin/kappmaker-setup-teardown ) >/dev/null 2>&1 &' 2>/dev/null \
+    || true
+}
+
 clear 2>/dev/null || true
 printf '%s' "$CYAN"
 cat <<'BANNER'
@@ -210,9 +234,13 @@ say ""
 say "${DIM}(Tip: keep this tab open; you'll hop to another tab and come back.)${RESET}"
 
 if have_claude_login && have_telegram_token && have_paired; then
-  step "You're already set up! 🎉"
-  say "Your bot is running. Open Telegram and send it a message."
-  say "You can close this page."
+  BOT_USERNAME="$(fetch_bot_username)"
+  step "✅ You're all connected!"
+  say "Your bot${BOT_USERNAME:+ ${BOLD}@${BOT_USERNAME}${RESET}} is running — open Telegram and say hi."
+  say "It will introduce itself and ask about the app you want to build."
+  say ""
+  say "${DIM}Setup is complete. This page is shutting down now — you can close the tab.${RESET}"
+  finalize_setup
   exit 0
 fi
 
@@ -391,38 +419,14 @@ else
 fi
 
 # ---------- Done ----------
-step "That's it — you're all set! 🎉"
+step "🎉 You're all set!"
 say "  ${BOLD}Open Telegram, message @${BOT_USERNAME:-your bot}, and say hi.${RESET}"
 say "  It will introduce itself and ask about the app you want to build."
 say ""
-say "${DIM}This setup page is switching itself off now — that's normal and means"
-say "everything worked. You can close this tab.${RESET}"
+say "${DIM}Setup is complete. This page is shutting down now — you can close the tab.${RESET}"
 say ""
 
-# Tell the control plane setup is complete (flips the dashboard to Active),
-# carrying only the PUBLIC bot username — never the token. One-shot via the same
-# marker the always-on runner uses, so the two never double-report.
-SETUP_SENT_MARKER="$HOME/.config/kappmaker/.setup-complete-sent"
-if [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$SETUP_SENT_MARKER" ]]; then
-  if curl -fsS --max-time 15 -X POST "$SERVER_CALLBACK_URL" \
-      --data-urlencode "state=setup_complete" \
-      --data-urlencode "message=customer setup complete" \
-      ${BOT_USERNAME:+--data-urlencode "bot_username=$BOT_USERNAME"} \
-      >/dev/null 2>&1; then
-    mkdir -p "$(dirname "$SETUP_SENT_MARKER")" && touch "$SETUP_SENT_MARKER"
-  fi
-fi
-
-# Shut the setup page down IMMEDIATELY, so this terminal doesn't respawn (ttyd
-# would otherwise re-run the wizard on the browser's auto-reconnect, looking
-# like an endless refresh loop). Run the teardown in a detached transient unit:
-# stopping setup-web kills this wizard's process tree, so the teardown must live
-# outside it to finish. The always-on bot is already running (started above), so
-# we no longer restart it here. devuser has passwordless sudo.
-sudo -n systemd-run --quiet --collect --unit kappmaker-finish-setup \
-  /bin/bash -c 'sleep 2; /usr/local/bin/kappmaker-setup-teardown' \
-  2>/dev/null \
-  || sudo -n /bin/bash -c '( sleep 2; /usr/local/bin/kappmaker-setup-teardown ) >/dev/null 2>&1 &' 2>/dev/null \
-  || true
+# Report setup_complete + tear the setup page down (idempotent, detached).
+finalize_setup
 
 exit 0
