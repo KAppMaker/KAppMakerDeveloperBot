@@ -50,9 +50,10 @@ oops() { printf '%s✗ %s%s\n' "$RED" "$*" "$RESET"; }
 trap 'printf "\n%sSetup paused — just reload this page to pick up where you left off.%s\n" "$YELLOW" "$RESET"; exit 130' INT
 
 # Same detection logic as claude-telegram-run.sh — keep the three in sync.
-# Real login artifact ONLY. A recursive grep for "oauth" would match the Telegram
-# plugin's node_modules and falsely report "signed in", skipping Step 1.
-have_claude_login()   { [[ -s "$CLAUDE_CREDS" ]]; }
+# Authoritative check via `claude auth status` (NOT a recursive grep for "oauth",
+# which matches the Telegram plugin's node_modules and would falsely report
+# "signed in", skipping Step 1). Version-proof — doesn't assume a creds path.
+have_claude_login()   { claude auth status 2>/dev/null | grep -q '"loggedIn" *: *true'; }
 have_telegram_token() { [[ -f "$TELEGRAM_ENV" ]] && grep -qs "TELEGRAM_BOT_TOKEN=..*" "$TELEGRAM_ENV"; }
 # Paired = the customer's Telegram account is on the allowlist. Until then the
 # bot only hands out pairing codes; nobody can reach the assistant.
@@ -165,19 +166,19 @@ else
   say "Your machine uses ${BOLD}your${RESET} Claude subscription to build your app."
   say "Here's how the sign-in works:"
   say ""
-  say "  1. I'll start Claude below. It will show a ${BOLD}link${RESET}."
+  say "  1. I'll start the Claude sign-in below. It will show a ${BOLD}link${RESET}."
   say "  2. Click the link (or copy it into a new browser tab) and sign in."
   say "  3. Copy the code you get and paste it back here, then press Enter."
-  say "  4. When you see Claude's chat screen, type ${BOLD}/exit${RESET} and press"
-  say "     Enter to come back to me."
   say ""
   while ! have_claude_login; do
     printf '%s' "${BOLD}Press Enter to start the Claude sign-in… ${RESET}"
     read -r _ || exit 0
     say ""
-    # Run from the projects workspace so Claude's first run lands where the
-    # always-on bot will work later.
-    ( cd "$HOME/projects" 2>/dev/null || cd "$HOME" || exit 1; claude ) || true
+    # `claude auth login` runs the sign-in flow directly (prints the URL, waits
+    # for the pasted code) — no interactive chat screen to /exit out of. Run from
+    # the projects workspace so Claude's first run lands where the always-on bot
+    # works later. --claudeai = use the Claude subscription (not API billing).
+    ( cd "$HOME/projects" 2>/dev/null || cd "$HOME" || exit 1; claude auth login --claudeai ) || true
     say ""
     if have_claude_login; then
       ok "Signed in to Claude!"
@@ -243,7 +244,11 @@ CURLCFG
     mkdir -p "$TELEGRAM_DIR"
     chmod 700 "$TELEGRAM_DIR" 2>/dev/null || true
     umask 177
-    printf 'TELEGRAM_BOT_TOKEN="%s"\n' "$token" > "$TELEGRAM_ENV"
+    # NO quotes around the value: the Telegram plugin's .env parser is a plain
+    # /^(\w+)=(.*)$/ that keeps surrounding quotes verbatim, so a quoted token
+    # becomes bot"123:ABC"/getMe → 404 and the bot never polls. (This matches the
+    # official /telegram:configure skill, which also writes it unquoted.)
+    printf 'TELEGRAM_BOT_TOKEN=%s\n' "$token" > "$TELEGRAM_ENV"
     umask 022
     chmod 600 "$TELEGRAM_ENV"
     unset token

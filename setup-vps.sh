@@ -303,6 +303,9 @@ except Exception:
     d = {}
 d.setdefault("theme", "dark")
 d["hasCompletedOnboarding"] = True
+# Dismiss new-feature upsell prompts that also block a headless start
+# (e.g. the 2.1.x "Try the new fullscreen renderer?" dialog).
+d["fullscreenUpsellSeenCount"] = 999
 proj = os.path.expanduser("~/projects")
 d.setdefault("projects", {}).setdefault(proj, {})["hasTrustDialogAccepted"] = True
 json.dump(d, open(cf, "w"), indent=2)
