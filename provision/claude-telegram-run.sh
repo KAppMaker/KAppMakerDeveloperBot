@@ -16,6 +16,7 @@ set -uo pipefail
 CLAUDE_CREDS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG_DIR="$HOME/.claude"
 TELEGRAM_ENV="$HOME/.claude/channels/telegram/.env"
+TELEGRAM_ACCESS="$HOME/.claude/channels/telegram/access.json"
 TELEGRAM_CHANNEL="plugin:telegram@claude-plugins-official"
 PROJECTS_DIR="$HOME/projects"
 KAPP_ENV="$HOME/.config/kappmaker/env"
@@ -32,6 +33,22 @@ have_claude_login() {
 
 have_telegram_token() {
   [[ -f "$TELEGRAM_ENV" ]] && grep -qs "TELEGRAM_BOT_TOKEN=..*" "$TELEGRAM_ENV"
+}
+
+# Setup is only truly complete once the customer's Telegram account is PAIRED —
+# i.e. their numeric user ID is in access.json's allowFrom. Until then the bot
+# is online (so pairing codes can be minted) but no one can reach the assistant,
+# and we must NOT tear down the browser-setup terminal or tell the control plane
+# "setup_complete". A public bot with an empty allowlist is not a finished setup.
+have_paired() {
+  [[ -f "$TELEGRAM_ACCESS" ]] || return 1
+  python3 - "$TELEGRAM_ACCESS" <<'PY' 2>/dev/null
+import json, sys
+try:
+    sys.exit(0 if json.load(open(sys.argv[1])).get("allowFrom") else 1)
+except Exception:
+    sys.exit(1)
+PY
 }
 
 # Pull the customer's current PUBLIC ssh key from the control plane (signed
@@ -63,52 +80,62 @@ if ! have_claude_login || ! have_telegram_token; then
   exit 1
 fi
 
-# Setup is done → tear down the one-time browser-setup terminal (ttyd + Caddy)
-# and close its firewall ports. One-shot: the teardown writes
-# /etc/kappmaker/.setup-done, so this guard skips forever after. Passwordless
-# sudo is granted to this user by bootstrap.sh; -n = never prompt.
-if [[ -x /usr/local/bin/kappmaker-setup-teardown && ! -f /etc/kappmaker/.setup-done ]]; then
-  sudo -n /usr/local/bin/kappmaker-setup-teardown \
-    || echo "[claude-telegram] Browser-setup teardown failed — will retry on next start."
-fi
-
 cd "$PROJECTS_DIR" || exit 1
 
-# First start with the customer's creds in place: tell the control plane setup
-# is done (flips the dashboard to Active). One-shot via marker; carries only the
-# lifecycle state + the PUBLIC bot username (for the "Open your bot" button).
-# The bot token itself never leaves this box.
-if [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$SETUP_SENT_MARKER" ]]; then
-  BOT_USERNAME=""
-  # Pure-bash read: the token never appears in any subprocess argv (ps-safe).
-  TG_TOKEN=""
-  while IFS= read -r line; do
-    case "$line" in
-      TELEGRAM_BOT_TOKEN=*)
-        TG_TOKEN="${line#TELEGRAM_BOT_TOKEN=}"
-        TG_TOKEN="${TG_TOKEN%\"}"; TG_TOKEN="${TG_TOKEN#\"}"
-        break;;
-    esac
-  done < "$TELEGRAM_ENV"
-  if [[ -n "$TG_TOKEN" ]]; then
-    BOT_USERNAME="$(curl -fsS "https://api.telegram.org/bot${TG_TOKEN}/getMe" 2>/dev/null \
-      | sed -n 's/.*"username":"\([A-Za-z0-9_]*\)".*/\1/p')"
+# Credentials are in place → bring the bot ONLINE below no matter what, so the
+# customer can DM it and receive a pairing code. But the setup FLOW is only
+# finished once they've paired (their ID is in allowFrom). The teardown +
+# "setup_complete" callback are therefore gated on have_paired:
+#   - Normally the wizard does both the moment pairing succeeds.
+#   - This block is the fallback for the SSH setup path and for reboots — it
+#     runs on a later restart, once access.json shows an allowlisted sender.
+# Both are one-shot (markers), so wizard + runner never double-fire.
+if have_paired; then
+  # Tear down the one-time browser-setup terminal (ttyd + Caddy) and close its
+  # firewall ports. The teardown writes /etc/kappmaker/.setup-done, so this
+  # guard skips forever after. Passwordless sudo; -n = never prompt.
+  if [[ -x /usr/local/bin/kappmaker-setup-teardown && ! -f /etc/kappmaker/.setup-done ]]; then
+    sudo -n /usr/local/bin/kappmaker-setup-teardown \
+      || echo "[claude-telegram] Browser-setup teardown failed — will retry on next start."
   fi
-  unset TG_TOKEN
 
-  if curl -fsS -X POST "$SERVER_CALLBACK_URL" \
-      --data-urlencode "state=setup_complete" \
-      --data-urlencode "message=customer setup complete" \
-      ${BOT_USERNAME:+--data-urlencode "bot_username=$BOT_USERNAME"} \
-      >/dev/null 2>&1; then
-    touch "$SETUP_SENT_MARKER"
-  else
-    echo "[claude-telegram] setup_complete callback failed — will retry on next start."
+  # Tell the control plane setup is done (flips the dashboard to Active). Carries
+  # only the lifecycle state + the PUBLIC bot username (for the "Open your bot"
+  # button). The bot token itself never leaves this box.
+  if [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$SETUP_SENT_MARKER" ]]; then
+    BOT_USERNAME=""
+    # Pure-bash read: the token never appears in any subprocess argv (ps-safe).
+    TG_TOKEN=""
+    while IFS= read -r line; do
+      case "$line" in
+        TELEGRAM_BOT_TOKEN=*)
+          TG_TOKEN="${line#TELEGRAM_BOT_TOKEN=}"
+          TG_TOKEN="${TG_TOKEN%\"}"; TG_TOKEN="${TG_TOKEN#\"}"
+          break;;
+      esac
+    done < "$TELEGRAM_ENV"
+    if [[ -n "$TG_TOKEN" ]]; then
+      BOT_USERNAME="$(curl -fsS "https://api.telegram.org/bot${TG_TOKEN}/getMe" 2>/dev/null \
+        | sed -n 's/.*"username":"\([A-Za-z0-9_]*\)".*/\1/p')"
+    fi
+    unset TG_TOKEN
+
+    if curl -fsS -X POST "$SERVER_CALLBACK_URL" \
+        --data-urlencode "state=setup_complete" \
+        --data-urlencode "message=customer setup complete" \
+        ${BOT_USERNAME:+--data-urlencode "bot_username=$BOT_USERNAME"} \
+        >/dev/null 2>&1; then
+      touch "$SETUP_SENT_MARKER"
+    else
+      echo "[claude-telegram] setup_complete callback failed — will retry on next start."
+    fi
   fi
 fi
 
 # --dangerously-skip-permissions enables hands-off Telegram operation. Safe only
 # because the box is locked down to the owner (see hardening in bootstrap.sh).
+# Starts the Telegram MCP server (the bot goes online); until the customer is
+# paired it will only hand out pairing codes, never reach the assistant.
 exec claude \
   --channels "$TELEGRAM_CHANNEL" \
   --dangerously-skip-permissions

@@ -245,6 +245,35 @@ else
   log "KAPP_SKIP_SKILLS=1 — skipping recommended skills (caveman, ui-ux-pro-max)"
 fi
 
+# ---------- 9c4. Claude Code plugins (Telegram channel + KAppMaker) ----------
+# The Telegram channel is a Claude Code PLUGIN, not a built-in — without it,
+# `claude --channels plugin:telegram@claude-plugins-official` (the always-on
+# service) has no channel to load and the bot never comes online. Install it
+# non-interactively here so a fresh box is ready to pair the moment the customer
+# logs in. Also install the KAppMaker plugin (the app-building skills/persona).
+# Best-effort: a plugin hiccup must not fail the whole provision. `claude plugin
+# install` clones public marketplace repos over HTTPS and needs no Claude login,
+# so it works at provision time (before the customer signs in).
+log "Installing the Telegram channel + KAppMaker Claude Code plugins"
+if command -v claude >/dev/null; then
+  claude plugin marketplace add anthropics/claude-plugins-official >/dev/null 2>&1 \
+    || warn "Could not add the official plugin marketplace — Telegram plugin may be missing."
+  if claude plugin install telegram@claude-plugins-official >/dev/null 2>&1; then
+    log "Telegram channel plugin installed"
+  else
+    warn "Telegram plugin install failed — retry later: claude plugin install telegram@claude-plugins-official"
+  fi
+
+  claude plugin marketplace add KAppMaker/KAppMaker-CLI >/dev/null 2>&1 || true
+  if claude plugin install kappmaker@KAppMaker-CLI >/dev/null 2>&1; then
+    log "KAppMaker plugin installed"
+  else
+    warn "KAppMaker plugin install skipped/failed — retry later: claude plugin install kappmaker@KAppMaker-CLI"
+  fi
+else
+  warn "claude CLI not on PATH — skipping plugin install (Telegram channel won't load until installed)."
+fi
+
 # ---------- 9d. self-improve loop template + installer ----------
 # The loop is an OPT-IN scaffold: deployed here, installed per-app with `kapp-loop-install`,
 # and OFF until a human triggers it. We fetch the repo tarball and extract the two pieces.
