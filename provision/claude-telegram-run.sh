@@ -27,12 +27,11 @@ SETUP_SENT_MARKER="$HOME/.config/kappmaker/.setup-complete-sent"
 [[ -f "$KAPP_ENV" ]] && source "$KAPP_ENV"
 
 have_claude_login() {
-  # Real login artifact ONLY: ~/.claude/.credentials.json (written after `claude`
-  # OAuth login). Do NOT fall back to `grep -r oauth ~/.claude` — the Telegram
-  # channel plugin's node_modules (pkce-challenge, jose, MCP SDK auth) contain
-  # that string, so the grep gives a false positive and would start the bot (and
-  # make the wizard skip the sign-in step) before the customer has logged in.
-  [[ -s "$CLAUDE_CREDS" ]]
+  # Authoritative check via `claude auth status` (prints {"loggedIn": true|false}).
+  # Do NOT `grep -r oauth ~/.claude` — the Telegram channel plugin's node_modules
+  # (pkce-challenge, jose, MCP SDK auth) contain that string, so the grep gives a
+  # false positive and would start the bot before the customer has signed in.
+  claude auth status 2>/dev/null | grep -q '"loggedIn" *: *true'
 }
 
 have_telegram_token() {
