@@ -133,6 +133,65 @@ print("OK", sid); sys.exit(0)
 PY
 }
 
+# Read the bot token from .env (quotes stripped defensively), never printing it
+# anywhere it could be logged. Used for read-only Telegram API calls (getChat).
+tg_token() {
+  local tok="" line
+  while IFS= read -r line; do
+    case "$line" in
+      TELEGRAM_BOT_TOKEN=*) tok="${line#TELEGRAM_BOT_TOKEN=}"; tok="${tok%\"}"; tok="${tok#\"}"; break;;
+    esac
+  done < "$TELEGRAM_ENV" 2>/dev/null
+  printf '%s' "$tok"
+}
+
+# Newest pending pairing entry (someone just DM'd the bot), as "code<TAB>senderId<TAB>chatId".
+# Empty if none. This is how we auto-detect a connection without the customer
+# copying a code — the server writes pending[code] the moment they message.
+newest_pending() {
+  python3 - "$TELEGRAM_ACCESS" <<'PY' 2>/dev/null
+import json, sys
+try:
+    p = json.load(open(sys.argv[1])).get("pending", {})
+except Exception:
+    p = {}
+if not p:
+    sys.exit(0)
+k = max(p, key=lambda k: p[k].get("createdAt", 0))
+e = p[k]
+print("%s\t%s\t%s" % (k, e.get("senderId", ""), e.get("chatId", "")))
+PY
+}
+
+# Resolve a Telegram account's display name (for the "is this you?" confirm) via
+# getChat. Public info only; best-effort. $1 = chatId.
+resolve_name() {
+  local tok; tok="$(tg_token)"
+  [[ -n "$tok" && -n "${1:-}" ]] || return 0
+  curl -fsS --max-time 8 "https://api.telegram.org/bot${tok}/getChat?chat_id=$1" 2>/dev/null \
+    | python3 -c 'import sys, json
+try:
+    r = json.load(sys.stdin).get("result", {})
+    n = " ".join(x for x in [r.get("first_name"), r.get("last_name")] if x)
+    u = r.get("username")
+    print((n or "") + ((" (@%s)" % u) if u else ""))
+except Exception:
+    pass'
+}
+
+# Discard a pending entry the customer says isn't them. $1 = code.
+deny_pending() {
+  python3 - "$TELEGRAM_ACCESS" "$1" <<'PY' 2>/dev/null
+import json, sys
+try:
+    a = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+a.get("pending", {}).pop(sys.argv[2], None)
+json.dump(a, open(sys.argv[1], "w"), indent=2)
+PY
+}
+
 clear 2>/dev/null || true
 printf '%s' "$CYAN"
 cat <<'BANNER'
@@ -284,36 +343,48 @@ else
   say ""
   say "Last step — so that ${BOLD}only you${RESET} can talk to your bot:"
   say ""
-  say "  1. Open Telegram and find your bot: ${BOLD}@${BOT_USERNAME:-your_bot}${RESET}"
-  say "  2. Send it any message — for example, ${BOLD}hi${RESET}"
-  say "  3. It replies with a ${BOLD}6-character code${RESET}."
-  say "  4. Type that code below and press Enter."
+  if [[ -n "$BOT_USERNAME" ]]; then
+    say "  1. On your phone, tap this link to open your bot:"
+    say "        ${BOLD}https://t.me/${BOT_USERNAME}${RESET}"
+    say "  2. Send it any message — for example, ${BOLD}hi${RESET}"
+  else
+    say "  1. Open Telegram and find your bot."
+    say "  2. Send it any message — for example, ${BOLD}hi${RESET}"
+  fi
   say ""
-  say "${DIM}(If it doesn't reply within a few seconds, wait a moment and send it"
-  say "another message — the bot is still starting up.)${RESET}"
+  say "That's it — I'll notice automatically and finish the connection for you."
   say ""
+  say "${DIM}Waiting for you to message the bot…${RESET}"
 
+  # Auto-detect: the bot writes a pending entry the instant the customer DMs it.
+  # We surface WHO connected and ask for a one-tap confirm (defends the tiny
+  # window against a stranger who guessed the brand-new bot name), then pair —
+  # no 6-character code for the customer to copy.
   while ! have_paired; do
-    printf '%s' "${BOLD}Enter the 6-character code your bot sent you: ${RESET}"
-    IFS= read -r code || exit 0
-    code="$(trim "$code")"
-    [[ -z "$code" ]] && continue
+    pend="$(newest_pending)"
+    if [[ -z "$pend" ]]; then
+      sleep 3
+      continue
+    fi
+    p_code="${pend%%$'\t'*}"; p_rest="${pend#*$'\t'}"
+    p_sid="${p_rest%%$'\t'*}"; p_cid="${p_rest##*$'\t'}"
+    p_name="$(resolve_name "$p_cid")"
 
-    case "$(pair_code "$code")" in
-      OK*)
-        ok "Paired! Your bot now answers only to you. 🔒"
-        ;;
-      NOTFOUND)
-        oops "I don't see that code yet."
-        say "   Make sure you messaged ${BOLD}@${BOT_USERNAME:-your bot}${RESET} and it replied with a code,"
-        say "   then paste the code here. (Give it a few seconds after your first message.)"
-        ;;
-      EXPIRED)
-        oops "That code expired."
-        say "   Send your bot another message to get a fresh code, then paste it here."
+    say ""
+    ok "Someone just connected${p_name:+ as ${BOLD}${p_name}${RESET}${GREEN}}${p_name:+ }(Telegram id ${p_sid})."
+    printf '%s' "${BOLD}Is that you? Press Enter to confirm, or type n if not: ${RESET}"
+    IFS= read -r ans || exit 0
+    case "$ans" in
+      [Nn]*)
+        deny_pending "$p_code"
+        oops "Ignored that one. Still waiting for you to message the bot…"
         ;;
       *)
-        oops "Couldn't pair with that code — double-check it and try again."
+        case "$(pair_code "$p_code")" in
+          OK*) ok "Paired! Your bot now answers only to you. 🔒" ;;
+          EXPIRED) oops "That connection expired — just message the bot again." ;;
+          *)       oops "Couldn't complete that — message the bot again and I'll retry." ;;
+        esac
         ;;
     esac
   done
