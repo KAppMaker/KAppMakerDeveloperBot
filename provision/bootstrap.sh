@@ -241,8 +241,13 @@ else
   # 1.7.x which has it): swap the secret path for the old basic-auth gate so
   # the unit still starts. The dashboard detects the URL shape (no /s/) and
   # falls back to open-in-tab instead of embedding.
+  # NOTE: capture the help text FIRST. `ttyd --help | grep -q` is a trap under
+  # `set -o pipefail`: grep -q exits on first match, ttyd dies with SIGPIPE
+  # (141), the pipeline "fails", and the fallback fires on a perfectly good
+  # ttyd — which is exactly what happened on a real box.
+  TTYD_HELP="$(ttyd --help 2>&1 || true)"
   TTYD_BASE_PATH_OK=1
-  if ! ttyd --help 2>&1 | grep -q -- '--base-path'; then
+  if ! grep -q -- '--base-path' <<<"$TTYD_HELP"; then
     TTYD_BASE_PATH_OK=0
     warn "ttyd has no --base-path — falling back to basic-auth setup gate"
     sed -i 's|--base-path /s/${SETUP_CODE}|--credential setup:${SETUP_CODE}|' \
