@@ -116,8 +116,9 @@ rm -f "$TMP_SETUP"
 progress 70 "Locking your machine down (security)"
 # ---------- 4. security baseline ----------
 # (mirrors README "Securing the VPS"). NOTE: SSH stays reachable on :22 here so the
-# operator/customer can still get in. Tighten to Tailscale-only as a follow-up once
-# Tailscale is joined — see README. Locking SSH before Tailscale would risk lockout.
+# customer can get in with their key. Tailscale-only SSH is the owner's OPTIONAL
+# follow-up via `sudo kappmaker-tailscale-lockdown` (installed below; guided +
+# fail-safe) — auto-locking before their tailnet exists would risk lockout.
 log "Applying security baseline (UFW, SSH lockdown, fail2ban, auto-upgrades)"
 
 ufw --force default deny incoming
@@ -181,6 +182,13 @@ fi
 curl -fsSL "$PROVISION_BASE_URL/claude-telegram-run.sh" -o "/home/$DEVUSER/bin/claude-telegram-run.sh"
 chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/bin/claude-telegram-run.sh"
 chmod +x "/home/$DEVUSER/bin/claude-telegram-run.sh"
+
+# Optional owner-run extra hardening: lock SSH to their private Tailscale
+# network (guided, fail-safe — refuses to touch UFW until the owner has proven
+# a working tailnet SSH login). Surfaced in the dashboard's Advanced section.
+curl -fsSL "$PROVISION_BASE_URL/tailscale-lockdown.sh" -o /usr/local/bin/kappmaker-tailscale-lockdown \
+  && chmod 755 /usr/local/bin/kappmaker-tailscale-lockdown \
+  || warn "tailscale-lockdown helper not installed (optional)"
 
 TMP_UNIT="$(mktemp)"
 curl -fsSL "$PROVISION_BASE_URL/claude-telegram.service" -o "$TMP_UNIT"
