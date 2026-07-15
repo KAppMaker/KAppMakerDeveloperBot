@@ -131,9 +131,28 @@ ufw deny out 587/tcp
 ufw --force enable
 
 # SSH: key-only, no root login.
+# CRITICAL: editing sshd_config alone is NOT enough on Ubuntu cloud images —
+# cloud-init drops /etc/ssh/sshd_config.d/50-cloud-init.conf with
+# "PasswordAuthentication yes", drop-ins are Include'd at the TOP of the main
+# config, and OpenSSH is FIRST-MATCH-WINS, so the drop-in silently overrides
+# the main file (found live: effective config still said yes). Our own 00-*
+# drop-in sorts before 50-* and therefore wins over everything.
+install -d -m 755 /etc/ssh/sshd_config.d
+cat > /etc/ssh/sshd_config.d/00-kappmaker-hardening.conf <<'SSHHARDEN'
+# KAppMaker AI box hardening — keep FIRST in lexical order (first match wins).
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+SSHHARDEN
+chmod 644 /etc/ssh/sshd_config.d/00-kappmaker-hardening.conf
+# Belt-and-suspenders: also align the main config.
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/'             /etc/ssh/sshd_config
 sshd -t && systemctl restart ssh
+# Assert the EFFECTIVE config (catches any future higher-precedence override).
+if ! sshd -T 2>/dev/null | grep -qx 'passwordauthentication no'; then
+  warn "sshd effective config still allows passwords — check /etc/ssh/sshd_config.d/"
+fi
 
 systemctl enable --now fail2ban
 dpkg-reconfigure -f noninteractive unattended-upgrades || true
