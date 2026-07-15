@@ -135,16 +135,33 @@ if have_paired; then
   fi
 fi
 
-# Start the always-on channel session. claude NEEDS A TTY to run interactively;
-# under systemd there is none, so it falls back to --print mode and dies with
-# "Input must be provided either through stdin or as a prompt argument". We give
-# it a PTY via python's pty.spawn so it runs as a normal interactive session —
-# which is what actually activates the Telegram channel listener.
+# Start the always-on channel session INSIDE TMUX. claude NEEDS A TTY to run
+# interactively (under systemd there is none — it would fall back to --print
+# mode and die with "Input must be provided either through stdin or as a prompt
+# argument"); tmux provides the PTY *and* makes the live session attachable, so
+# the owner can SSH in and watch/drive Claude working:
+#
+#     tmux attach -t claude      (detach again: Ctrl+B then D)
+#
+# Supervision model: systemd runs THIS script; the script starts the tmux
+# session and then blocks while it exists. When claude exits/crashes the tmux
+# session dies, the wait-loop returns, we exit non-zero, and systemd's
+# Restart=always relaunches us — re-running the gates above (key sync, paired
+# finalization) before starting a fresh session. Stopping the service kills the
+# whole cgroup, tmux server included.
 #
 # --dangerously-skip-permissions enables hands-off operation (safe: the box is
 # locked to the owner; the one-time bypass warning is pre-accepted at provision
 # via ~/.claude/settings.json "skipDangerousModePermissionPrompt", alongside the
 # theme + folder-trust flags — otherwise those prompts would block a headless
 # start). Until the customer is paired the bot only hands out pairing codes.
-exec python3 -c 'import pty, sys; pty.spawn(sys.argv[1:])' \
+TMUX_SESSION="claude"
+tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+tmux new-session -d -s "$TMUX_SESSION" \
   claude --channels "$TELEGRAM_CHANNEL" --dangerously-skip-permissions
+echo "[claude-telegram] Claude is live in tmux session '$TMUX_SESSION' — watch it: tmux attach -t $TMUX_SESSION"
+while tmux has-session -t "$TMUX_SESSION" 2>/dev/null; do
+  sleep 5
+done
+echo "[claude-telegram] Session ended — systemd will restart it."
+exit 1
