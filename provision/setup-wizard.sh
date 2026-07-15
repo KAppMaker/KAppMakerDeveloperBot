@@ -216,6 +216,18 @@ finalize_setup() {
     || true
 }
 
+# Non-secret setup checkpoint for the dashboard's live stepper. Posted as a
+# plain progress step ("setup:<name>") — the control plane treats progress as
+# display-only (never a lifecycle change). Called unconditionally at the end of
+# each step block (including the "already done" branches) so a page reload
+# re-converges the dashboard. Values are fixed strings — no customer data.
+substep() {
+  [[ -n "${SERVER_CALLBACK_URL:-}" ]] || return 0
+  curl -fsS --max-time 8 -X POST "$SERVER_CALLBACK_URL" \
+    --data-urlencode "state=progress" \
+    --data-urlencode "step=setup:$1" >/dev/null 2>&1 || true
+}
+
 clear 2>/dev/null || true
 printf '%s' "$CYAN"
 cat <<'BANNER'
@@ -229,17 +241,16 @@ BANNER
 printf '%s' "$RESET"
 say ""
 say "${BOLD}Welcome! This is your very own app-building machine.${RESET}"
-say "Three quick steps and it starts working for you — takes about 3 minutes."
-say ""
-say "${DIM}(Tip: keep this tab open; you'll hop to another tab and come back.)${RESET}"
+say "Three quick steps — about 3 minutes."
 
 if have_claude_login && have_telegram_token && have_paired; then
   BOT_USERNAME="$(fetch_bot_username)"
+  substep paired
   step "✅ You're all connected!"
   say "Your bot${BOT_USERNAME:+ ${BOLD}@${BOT_USERNAME}${RESET}} is running — open Telegram and say hi."
   say "It will introduce itself and ask about the app you want to build."
   say ""
-  say "${DIM}Setup is complete. This page is shutting down now — you can close the tab.${RESET}"
+  say "${DIM}Setup is complete — your dashboard will flip to Active in a moment.${RESET}"
   finalize_setup
   exit 0
 fi
@@ -250,12 +261,8 @@ step "Step 1 of 3 — Sign in to Claude"
 if have_claude_login; then
   ok "Already signed in to Claude — nothing to do here."
 else
-  say "Your machine uses ${BOLD}your${RESET} Claude subscription to build your app."
-  say "Here's how the sign-in works:"
-  say ""
-  say "  1. I'll start the Claude sign-in below. It will show a ${BOLD}link${RESET}."
-  say "  2. Click the link (or copy it into a new browser tab) and sign in."
-  say "  3. Copy the code you get and paste it back here, then press Enter."
+  say "Your machine builds with ${BOLD}your${RESET} Claude subscription."
+  say "You'll get a ${BOLD}link${RESET} to sign in, then paste the code back here."
   say ""
   while ! have_claude_login; do
     printf '%s' "${BOLD}Press Enter to start the Claude sign-in… ${RESET}"
@@ -274,6 +281,7 @@ else
     fi
   done
 fi
+substep claude_connected
 
 # ---------- Step 2: Telegram bot token ----------
 step "Step 2 of 3 — Add your Telegram bot"
@@ -349,6 +357,7 @@ fi
 # Recover the bot username if Step 2 was skipped (token already on disk from an
 # earlier run) — needed for the "message @yourbot" instructions below.
 [[ -z "$BOT_USERNAME" ]] && BOT_USERNAME="$(fetch_bot_username)"
+substep telegram_connected
 
 # ---------- Step 3: pair your Telegram account ----------
 step "Step 3 of 3 — Connect your account to the bot"
@@ -419,11 +428,12 @@ else
 fi
 
 # ---------- Done ----------
+substep paired
 step "🎉 You're all set!"
 say "  ${BOLD}Open Telegram, message @${BOT_USERNAME:-your bot}, and say hi.${RESET}"
 say "  It will introduce itself and ask about the app you want to build."
 say ""
-say "${DIM}Setup is complete. This page is shutting down now — you can close the tab.${RESET}"
+say "${DIM}Setup is complete — your dashboard will flip to Active in a moment.${RESET}"
 say ""
 
 # Report setup_complete + tear the setup page down (idempotent, detached).

@@ -176,8 +176,10 @@ systemctl enable --now claude-telegram.service
 # Non-technical customers finish setup FROM THE BROWSER — no SSH, no keys:
 # ttyd (loopback-only) serves setup-wizard.sh in a web terminal; Caddy fronts
 # it with REAL TLS on an sslip.io hostname (the box IP with dashes, e.g.
-# 203-0-113-7.sslip.io). Access is gated by basic auth: user "setup" + a random
-# code generated here and shown to the customer in the dashboard.
+# 203-0-113-7.sslip.io). Access is gated by PATH SECRECY: ttyd serves only
+# under /s/<random 32-hex code> (--base-path) and 404s everything else. The
+# dashboard embeds this URL in an <iframe> (basic auth can't do that), and
+# Caddy's CSP frame-ancestors pins embedding to our dashboard origin only.
 #
 # TLS choice: Caddy auto-issues via Let's Encrypt first. sslip.io's LE quota is
 # shared by every sslip.io user on the internet and has been exhausted before
@@ -210,8 +212,8 @@ else
   # login shell instead of our credential-gated wizard. Kill it before ours.
   systemctl disable --now ttyd 2>/dev/null || true
 
-  # Random access code = the basic-auth password (user is always "setup").
-  # Reused across re-runs so a URL/code already shown to the customer stays valid.
+  # Random access code = the secret path segment (/s/<code>).
+  # Reused across re-runs so a URL already shown to the customer stays valid.
   install -d -m 755 /etc/kappmaker
   if [[ ! -f /etc/kappmaker/setup-web.env ]]; then
     SETUP_CODE="$(openssl rand -hex 16)"   # 32 chars, [0-9a-f]
@@ -235,6 +237,18 @@ else
   sed "s/__DEVUSER__/$DEVUSER/g" "$TMP_UNIT" > /etc/systemd/system/setup-web.service
   rm -f "$TMP_UNIT"
 
+  # Fallback for ancient ttyd builds without --base-path (Ubuntu 24.04 ships
+  # 1.7.x which has it): swap the secret path for the old basic-auth gate so
+  # the unit still starts. The dashboard detects the URL shape (no /s/) and
+  # falls back to open-in-tab instead of embedding.
+  TTYD_BASE_PATH_OK=1
+  if ! ttyd --help 2>&1 | grep -q -- '--base-path'; then
+    TTYD_BASE_PATH_OK=0
+    warn "ttyd has no --base-path — falling back to basic-auth setup gate"
+    sed -i 's|--base-path /s/${SETUP_CODE}|--credential setup:${SETUP_CODE}|' \
+      /etc/systemd/system/setup-web.service
+  fi
+
   # 48h auto-expiry: if the customer never finishes setup, close the browser
   # terminal (and tell the control plane) so it can't linger open forever.
   curl -fsSL "$PROVISION_BASE_URL/setup-expiry.service" -o "$TMP_UNIT" 2>/dev/null \
@@ -249,12 +263,24 @@ else
   if [[ "$SETUP_IP" =~ ^[0-9]+(\.[0-9]+){3}$ ]]; then
     SETUP_HOST="${SETUP_IP//./-}.sslip.io"
 
+    # Dashboard origin (scheme://host[:port]) from the callback URL — the
+    # control plane always roots callbacks at its own app URL, so this is the
+    # one origin allowed to EMBED the setup terminal. Empty → embedding denied
+    # entirely ('none'): fail closed rather than open.
+    APP_ORIGIN="$(printf '%s\n' "${SERVER_CALLBACK_URL:-}" | sed -En 's~^(https?://[^/]+).*~\1~p')"
+    [[ "$APP_ORIGIN" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?$ ]] || APP_ORIGIN="'none'"
+
     cat > /etc/caddy/Caddyfile <<CADDY
 # KAppMaker AI — one-time browser setup (written by bootstrap.sh, removed with
 # the setup flow by kappmaker-setup-teardown). Caddy auto-issues a certificate
 # for the sslip.io name (Let's Encrypt, ZeroSSL fallback) and proxies to the
-# loopback-only ttyd; basic auth is enforced by ttyd itself.
+# loopback-only ttyd, which only answers under its secret /s/<code> base path.
+# frame-ancestors: only the dashboard may embed the terminal (clickjacking
+# guard). no-referrer: the code-bearing URL must never leak via the Referer
+# header when the customer clicks out (e.g. the Claude sign-in link).
 $SETUP_HOST {
+	header Referrer-Policy "no-referrer"
+	header Content-Security-Policy "frame-ancestors $APP_ORIGIN"
 	reverse_proxy 127.0.0.1:7681
 }
 CADDY
@@ -270,8 +296,14 @@ CADDY
     # Start the 48h expiry countdown (harmless if the unit files are absent).
     systemctl enable --now setup-expiry.timer >/dev/null 2>&1 || true
 
-    SETUP_URL="https://$SETUP_HOST/"
-    log "Browser setup live at $SETUP_URL (user: setup)"
+    # Trailing slash matters: ttyd serves its assets + websocket relative to
+    # the base path, so /s/<code> without the slash would 404 the assets.
+    if [[ "$TTYD_BASE_PATH_OK" == "1" ]]; then
+      SETUP_URL="https://$SETUP_HOST/s/$SETUP_CODE/"
+    else
+      SETUP_URL="https://$SETUP_HOST/"   # legacy basic-auth shape
+    fi
+    log "Browser setup live at $SETUP_URL"
   else
     warn "Could not determine public IPv4 — browser setup skipped (SSH path still works)"
     SETUP_CODE=""
@@ -283,10 +315,11 @@ progress 97 "Almost ready"
 log "Bootstrap complete — box is up and awaiting customer setup"
 callback awaiting_setup "bootstrap complete"
 
-# Publish the browser-setup coordinates so the dashboard can show the customer
-# a "Finish setup" button. Contract: state=awaiting_setup + setup_url +
-# setup_code (basic-auth user is always "setup"). These gate setup access only
-# — no customer secret is ever sent (see ZERO-KNOWLEDGE note above).
+# Publish the browser-setup coordinates so the dashboard can embed/link the
+# setup terminal. Contract: state=awaiting_setup + setup_url (secret-path form
+# https://<host>/s/<code>/) + setup_code (kept for back-compat + display).
+# These gate setup access only — no customer secret is ever sent (see
+# ZERO-KNOWLEDGE note above).
 if [[ -n "$SERVER_CALLBACK_URL" && -n "$SETUP_URL" && -n "$SETUP_CODE" ]]; then
   curl -fsS -X POST "$SERVER_CALLBACK_URL" \
     --data-urlencode "state=awaiting_setup" \
@@ -300,9 +333,9 @@ SETUP_URL_DISPLAY="${SETUP_URL:-(browser setup unavailable — see warnings abov
 cat <<NEXT
 
 ────────────────────────────────────────────────────────────
-Box is provisioned + hardened. The customer finishes setup IN THE BROWSER:
+Box is provisioned + hardened. The customer finishes setup IN THE BROWSER
+(embedded in the KAppMaker dashboard, or directly at):
   $SETUP_URL_DISPLAY
-  login: user "setup" + the setup code (shown in the KAppMaker dashboard)
 The wizard walks them through Claude login + Telegram bot token, then the
 setup page shuts itself down automatically.
 

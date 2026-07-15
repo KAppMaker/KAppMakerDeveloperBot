@@ -7,12 +7,16 @@
 # Security model:
 #   - ttyd binds LOOPBACK ONLY (-i lo); the outside world reaches it through
 #     Caddy, which terminates real TLS on an sslip.io hostname (see bootstrap.sh).
-#   - Access is gated by HTTP basic auth: user "setup", password = the random
-#     SETUP_CODE generated at bootstrap (shown to the customer in the dashboard).
+#   - Access is gated by PATH SECRECY: ttyd serves ONLY under
+#     --base-path /s/<SETUP_CODE> (random 32-hex, 128-bit) and 404s every other
+#     path, including /. Same entropy as the old basic-auth password, but it
+#     works inside an <iframe> (browsers block basic-auth-in-URL for frames) so
+#     the dashboard can embed the wizard. TLS protects the path on the wire;
+#     Caddy sends CSP frame-ancestors so only our dashboard may embed it.
 #     Anyone with the code gets a shell as the box owner — acceptable because
 #     the code is only ever shown to the box's owner and the whole box IS theirs.
 #   - EnvironmentFile has no "-" prefix ON PURPOSE: if the code file is missing
-#     (e.g. after teardown) the unit must fail rather than start with no auth.
+#     (e.g. after teardown) the unit must fail rather than start unprotected.
 #   - Once setup completes, setup-teardown.sh stops+disables this unit, closes
 #     the firewall ports, and writes the marker below so it can never come back.
 
@@ -30,8 +34,9 @@ WorkingDirectory=/home/__DEVUSER__
 EnvironmentFile=/etc/kappmaker/setup-web.env
 # -i lo: loopback only (Caddy fronts it)   -W: allow typing (ttyd 1.7+ is
 # read-only by default)   -m 2: at most two concurrent viewers.
+# --base-path /s/<code>: the secret path IS the access gate (see above).
 ExecStart=/usr/bin/ttyd --port 7681 --interface lo --writable --max-clients 2 \
-  --credential setup:${SETUP_CODE} \
+  --base-path /s/${SETUP_CODE} \
   -t titleFixed=KAppMaker-Setup -t disableLeaveAlert=true \
   /home/__DEVUSER__/bin/setup-wizard.sh
 Restart=always
