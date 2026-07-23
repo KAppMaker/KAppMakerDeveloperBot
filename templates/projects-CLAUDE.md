@@ -110,6 +110,7 @@ What's in there:
 - **Phase guides** — ordered blueprints for the whole developer journey, one per phase: `getting-started` (Phase 1: run locally + build the MVP, no accounts needed), `integrations` (Firebase, auth, web-proxy), `publishing` (icons, signing, store listings), `monetization` (subscriptions, credit packs, paywall, ads), `growth` (analytics, push, onboarding, virality).
 - **Task skills** — one job each, usable standalone: `new-app` (idea → PRD interview), `build-features`, `new-screen`, `run-the-app`, `refactor-package`, `setup-firebase`, `design-paywall`, `run-quality-gates`, `verify-ui`, and ~25 more.
 - **Progress files** — `PROGRESS_FEATURES.md` and `PROGRESS_P1…P5*.md` live at the project's **git repo root** and are committed. Read the relevant one first, continue from the first unchecked item, tick items off as you go. This is how a fresh session resumes where the last one stopped.
+- **`PROGRESS_SETUP.md`** — written by `kappmaker create` itself (same convention): all 13 scaffolding steps, ticked as they complete, each with the standalone command to re-run it. If a create was interrupted (crash, restart mid-build), resume from the first unchecked item there instead of re-running the full `kappmaker create`. Steps marked "(skipped)" were deliberately declined — offer their command when the user asks for that capability later.
 
 Routing between the two toolsets:
 
