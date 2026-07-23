@@ -63,15 +63,18 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
 - **Starting new project** — when the user says "let's start a new app", "new project", "starting new project now", or similar:
   1. `cd ~/projects` so you're not in any existing project's context.
   2. Read `~/projects/MEMORY.md` for relevant preferences (repo privacy, license, default stack, etc.).
-  3. Confirm with the user: app name + a one-line scope. Don't auto-pick a name.
-  4. Then run `kappmaker create <AppName>` and continue from inside the new directory.
+  3. Confirm with the user: app name + a one-line scope. If they have no name, suggest 3 candidates with one marked ✅ recommended (via Telegram `reply`). Don't auto-pick silently.
+  4. Pick the path:
+     - **Raw idea, no PRD yet** (default) → `kappmaker clone <AppName>` (light scaffold, no accounts needed — the template ships a mock subscription provider), then follow the project's bundled `new-app` skill: it interviews the user (relay the 2–3-question batches with ✅ recommended options via Telegram `reply`), writes `AiGuidelines/prd.md` / user-flow / UI docs, then hands off to the `getting-started` guide. Don't invent the product yourself. Firebase/store/Adapty setup waits for the phase that needs it.
+     - **User explicitly wants full infra up front** → `kappmaker create <AppName>` (full 13-step flow), then continue with the bundled skills as above.
+  5. Either way, continue from inside the new project directory.
 
 - **Archiving a project** — when the user says "archive X", "I'm done with X", "remove X from active projects":
   1. Confirm with the user using the project name spelled back.
   2. Move it: `mv ~/projects/X ~/projects/.archived/X` (create `.archived/` if missing).
   3. Don't delete — `.archived/` keeps it recoverable.
 
-- **Resuming a project** — "let's get back to X", "resume X" → same flow as project switching, plus a one-line recap of `~/projects/X/CLAUDE.md` (if it exists) so the user remembers where they left off.
+- **Resuming a project** — "let's get back to X", "resume X" → same flow as project switching, plus a one-line recap of `~/projects/X/CLAUDE.md` (if it exists) so the user remembers where they left off. If `PROGRESS_*.md` files exist at the project's repo root (see "Project-bundled skills"), also report the first unchecked item as the likely next step.
 
 ## Creating apps and running tasks — prefer kappmaker
 
@@ -81,7 +84,7 @@ Workflow:
 
 1. Check whether kappmaker can do what the user is asking. If unsure, run `kappmaker --help` or `kappmaker <command> --help`. Full docs: <https://cli.kappmaker.com/>.
 2. If kappmaker can do it → use kappmaker, don't reinvent it manually.
-3. If kappmaker can't → tell the user explicitly, then propose a manual approach.
+3. If kappmaker can't → check the project's bundled skills next (see "Project-bundled skills" below). If no skill covers it either, tell the user explicitly, then propose a manual approach.
 4. New apps live as a new subdirectory under `~/projects/` (e.g. `~/projects/<app-name>/`). After bootstrapping, `cd` in and continue work there.
 
 ### Common kappmaker CLI commands
@@ -100,6 +103,28 @@ Workflow:
 
 If a credential is missing, kappmaker will say so — re-run `kappmaker config init` to add it.
 
+## Project-bundled skills (the boilerplate ships its own)
+
+Every app scaffolded from the KAppMaker boilerplate carries its own agent skills **inside the project**: a `skills/` folder at the repo root, auto-discovered by Claude Code through the `.claude/skills` symlink. They are the project's own playbook — written for that exact codebase, with real file paths and commands. **When working inside a project, check its bundled skills before improvising.** The index is `<project>/.claude/skills/README.md`; read it whenever you're unsure which skill covers a task.
+
+What's in there:
+
+- **Phase guides** — ordered blueprints for the whole developer journey, one per phase: `getting-started` (Phase 1: run locally + build the MVP, no accounts needed), `integrations` (Firebase, auth, web-proxy), `publishing` (icons, signing, store listings), `monetization` (subscriptions, credit packs, paywall, ads), `growth` (analytics, push, onboarding, virality).
+- **Task skills** — one job each, usable standalone: `new-app` (idea → PRD interview), `build-features`, `new-screen`, `run-the-app`, `refactor-package`, `setup-firebase`, `design-paywall`, `run-quality-gates`, `verify-ui`, and ~25 more.
+- **Progress files** — `PROGRESS_FEATURES.md` and `PROGRESS_P1…P5*.md` live at the project's **git repo root** and are committed. Read the relevant one first, continue from the first unchecked item, tick items off as you go. This is how a fresh session resumes where the last one stopped.
+- **`PROGRESS_SETUP.md`** — written by `kappmaker create` itself (same convention): all 13 scaffolding steps, ticked as they complete, each with the standalone command to re-run it. If a create was interrupted (crash, restart mid-build), resume from the first unchecked item there instead of re-running the full `kappmaker create`. Steps marked "(skipped)" were deliberately declined — offer their command when the user asks for that capability later.
+
+Routing between the two toolsets:
+
+- **kappmaker CLI** (workspace-wide) → scaffolding, AI assets (logos/screenshots), Firebase / store / Adapty automation, builds, publishing, version bumps.
+- **Project-bundled skills** (per-project) → building actual features, screens, local models, API wiring, quality gates, and the phase-by-phase journey. Many skills invoke kappmaker commands at the right moment — when following a skill, let it drive.
+
+Rules:
+
+- Guides tag steps **Agent Action** / **User Action** / **Validation**, with a STOP rule at every User Action (things only a human can do: a browser console, a device, Xcode). Over Telegram a STOP means: send the instruction via `reply` (numbered options where relevant), end the turn, and treat the user's next message as the answer — same pattern as the questions rule below. Never fabricate device state or credentials to keep going.
+- Skill interviews (e.g. `new-app`) ask in small batches with a ✅ recommended option per question — keep that structure in your Telegram replies.
+- Projects created from older template versions may have no `skills/` folder — fall back to the kappmaker CLI and normal engineering.
+
 ## Tech stack defaults
 
 Unless a project's own CLAUDE.md says otherwise:
@@ -109,6 +134,7 @@ Unless a project's own CLAUDE.md says otherwise:
 - Android SDK at `$ANDROID_SDK_ROOT`
 - iOS builds are NOT possible on this VPS (no macOS/Xcode) — App Store Connect *metadata* tasks via kappmaker still work
 - Use the kappmaker skill for app bootstrapping, logo/screenshot generation, store setup, Adapty config, builds, publishing, version bumping
+- Use the project-bundled skills (see above) for in-project development: features, screens, integrations, quality gates
 
 ## Telegram output style
 
