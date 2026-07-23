@@ -236,11 +236,14 @@ sudo visudo -c        # must print "parsed OK"
    ```bash
    kapp-service-install
    ```
-   By default this runs Claude inside an **attachable tmux session** managed by systemd — so you keep the live view you're used to **and** get auto-restart + start-on-boot:
+   (`setup-vps.sh` offers this at the end of provisioning — answer `Y` there and it's already done. `KAPP_INSTALL_SERVICE=1` pre-answers yes for non-interactive runs.)
+
+   This runs Claude inside an **attachable tmux session** managed by systemd — so you keep the live view you're used to **and** get auto-restart + start-on-boot:
    ```bash
    tmux attach -t claude      # watch it work live; detach with Ctrl+B then D
+   journalctl -fu claude-telegram   # supervision logs
    ```
-   It **auto-restarts within ~15s** if Claude dies and **starts on boot**. Prefer no tmux at all? `kapp-service-install --headless` runs Claude directly under systemd (strongest supervision; watch with `journalctl -fu claude-telegram`). Either way, **don't also run `claude` by hand in your own tmux** — two sessions polling the same bot token conflict. (Cloud-provisioned boxes get the headless service automatically via `provision/bootstrap.sh`.)
+   It **auto-restarts within ~15s** if Claude dies and **starts on boot**. **Don't also run `claude` by hand in your own tmux** — two sessions polling the same bot token conflict. (Cloud-provisioned boxes get the same service automatically via `provision/bootstrap.sh`.)
 
 7. **Log into GitHub CLI** for app repo pushes
    ```bash
