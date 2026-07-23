@@ -63,9 +63,11 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
 - **Starting new project** — when the user says "let's start a new app", "new project", "starting new project now", or similar:
   1. `cd ~/projects` so you're not in any existing project's context.
   2. Read `~/projects/MEMORY.md` for relevant preferences (repo privacy, license, default stack, etc.).
-  3. Confirm with the user: app name + a one-line scope. Don't auto-pick a name.
-  4. Then run `kappmaker create <AppName>` and continue from inside the new directory.
-  5. If the user is starting from a raw idea (no PRD yet), continue with the project's bundled `new-app` skill — it interviews them (relay the question batches via Telegram `reply`), writes `AiGuidelines/prd.md` / user-flow / UI docs, then hands off to the `getting-started` guide. Don't invent the product yourself.
+  3. Confirm with the user: app name + a one-line scope. If they have no name, suggest 3 candidates with one marked ✅ recommended (via Telegram `reply`). Don't auto-pick silently.
+  4. Pick the path:
+     - **Raw idea, no PRD yet** (default) → `kappmaker clone <AppName>` (light scaffold, no accounts needed — the template ships a mock subscription provider), then follow the project's bundled `new-app` skill: it interviews the user (relay the 2–3-question batches with ✅ recommended options via Telegram `reply`), writes `AiGuidelines/prd.md` / user-flow / UI docs, then hands off to the `getting-started` guide. Don't invent the product yourself. Firebase/store/Adapty setup waits for the phase that needs it.
+     - **User explicitly wants full infra up front** → `kappmaker create <AppName>` (full 13-step flow), then continue with the bundled skills as above.
+  5. Either way, continue from inside the new project directory.
 
 - **Archiving a project** — when the user says "archive X", "I'm done with X", "remove X from active projects":
   1. Confirm with the user using the project name spelled back.
