@@ -494,6 +494,46 @@ else
   warn "No /dev/tty available — skipping. Run 'kappmaker config init' manually after this script finishes."
 fi
 
+# ---------- 13. always-on service (opt-in) ----------
+# The always-on systemd service keeps the Telegram bot listening 24/7 (start on
+# boot, restart on crash; Claude runs inside an attachable tmux session). Safe
+# to install BEFORE the Claude login / Telegram token exist — the runner waits
+# politely and systemd retries until setup is finished.
+#
+# Requires a non-root user (claude refuses --dangerously-skip-permissions as
+# root) and systemd. Control:
+#   KAPP_INSTALL_SERVICE=1   install without asking (non-interactive automation)
+#   KAPP_INSTALL_SERVICE=0   skip without asking
+#   unset                    prompt on a TTY; skip quietly when headless
+INSTALL_SERVICE=""
+if [[ "$(id -u)" -eq 0 ]]; then
+  [[ "${KAPP_INSTALL_SERVICE:-}" != "1" ]] \
+    || warn "KAPP_INSTALL_SERVICE=1 ignored — running as root. Re-run 'kapp-service-install' as your non-root sudo user."
+elif ! command -v systemctl >/dev/null; then
+  [[ "${KAPP_INSTALL_SERVICE:-}" != "1" ]] \
+    || warn "KAPP_INSTALL_SERVICE=1 ignored — systemd not found on this box."
+elif [[ ! -x "$HOME/bin/kapp-service-install" ]]; then
+  warn "kapp-service-install not staged in ~/bin (download failed earlier?) — skipping the always-on service."
+else
+  case "${KAPP_INSTALL_SERVICE:-}" in
+    1) INSTALL_SERVICE=yes ;;
+    0) : ;;
+    *)
+      if [[ -e /dev/tty ]]; then
+        printf '\nInstall the always-on service now? Keeps the Telegram bot running 24/7\n(start on boot, restart on crash; watch live: tmux attach -t claude).\nYou can also do it later by running: kapp-service-install  [Y/n] '
+        REPLY=""
+        read -r REPLY </dev/tty || REPLY=""
+        [[ "$REPLY" =~ ^[Nn] ]] || INSTALL_SERVICE=yes
+      fi
+      ;;
+  esac
+fi
+if [[ -n "$INSTALL_SERVICE" ]]; then
+  log "Installing the always-on service (kapp-service-install)"
+  "$HOME/bin/kapp-service-install" \
+    || warn "kapp-service-install failed — re-run it manually later."
+fi
+
 # ---------- done ----------
 log "System install complete!"
 cat <<'NEXT'
@@ -538,14 +578,22 @@ NEXT STEPS (interactive — cannot be scripted)
    Lock it down so only you can reach the bot:
      /telegram:access policy allowlist
 
-6. Run Claude inside tmux WITH the Telegram channel active
-   (so messages from your bot are received):
+6. Bring the bot online:
+
+   If you installed the always-on service above (or run `kapp-service-install`
+   now) — nothing to do: it already runs Claude with the Telegram channel in
+   tmux session 'claude', starts on boot, and restarts on crash.
+     Watch live: tmux attach -t claude    (detach: Ctrl+B then D)
+
+   Manual alternative (no service):
      tmux new -s claude
      cd ~/projects && claude --channels plugin:telegram@claude-plugins-official
    Detach: Ctrl+B then D    Reattach: tmux attach -t claude
 
    Note: plain `claude` starts a normal interactive session and does NOT
-   listen on Telegram. The --channels flag is required.
+   listen on Telegram. The --channels flag is required. Never run BOTH the
+   service and a manual --channels session — two Claudes polling one bot
+   token split the messages between them.
 
 7. Optional: log into GitHub CLI for app repo pushes:
      gh auth login
