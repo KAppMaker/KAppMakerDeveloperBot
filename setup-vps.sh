@@ -254,19 +254,27 @@ fi
 # Best-effort: a plugin hiccup must not fail the whole provision. `claude plugin
 # install` clones public marketplace repos over HTTPS and needs no Claude login,
 # so it works at provision time (before the customer signs in).
-log "Installing the Telegram channel + KAppMaker Claude Code plugins"
+log "Installing/updating the Telegram channel + KAppMaker Claude Code plugins"
 if command -v claude >/dev/null; then
   claude plugin marketplace add anthropics/claude-plugins-official >/dev/null 2>&1 \
     || warn "Could not add the official plugin marketplace — Telegram plugin may be missing."
-  if claude plugin install telegram@claude-plugins-official >/dev/null 2>&1; then
-    log "Telegram channel plugin installed"
+  claude plugin marketplace add KAppMaker/KAppMaker-CLI >/dev/null 2>&1 || true
+
+  # Re-provision friendly: refresh the marketplace clones so plugin updates
+  # actually ship, then update-or-install each plugin (`update` fails when the
+  # plugin isn't installed yet, in which case `install` takes over).
+  claude plugin marketplace update >/dev/null 2>&1 || true
+
+  if claude plugin update telegram@claude-plugins-official >/dev/null 2>&1 \
+    || claude plugin install telegram@claude-plugins-official >/dev/null 2>&1; then
+    log "Telegram channel plugin ready (installed/updated)"
   else
     warn "Telegram plugin install failed — retry later: claude plugin install telegram@claude-plugins-official"
   fi
 
-  claude plugin marketplace add KAppMaker/KAppMaker-CLI >/dev/null 2>&1 || true
-  if claude plugin install kappmaker@KAppMaker-CLI >/dev/null 2>&1; then
-    log "KAppMaker plugin installed"
+  if claude plugin update kappmaker@KAppMaker-CLI >/dev/null 2>&1 \
+    || claude plugin install kappmaker@KAppMaker-CLI >/dev/null 2>&1; then
+    log "KAppMaker plugin ready (installed/updated)"
   else
     warn "KAppMaker plugin install skipped/failed — retry later: claude plugin install kappmaker@KAppMaker-CLI"
   fi
