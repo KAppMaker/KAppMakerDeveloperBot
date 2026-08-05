@@ -114,9 +114,22 @@
   .summary { display:flex; align-items:center; gap:14px; }
   .doing .what { font-size:.9rem; }
 
-  .cols { display:grid; gap:16px; grid-template-columns:repeat(3,1fr); align-items:start; }
+  /* stretch, not start: a kanban reads as a board when the three columns share
+     one height, and each one scrolls inside itself. */
+  .cols { display:grid; gap:16px; grid-template-columns:repeat(3,1fr); align-items:stretch; }
   @media (max-width:820px) { .cols { grid-template-columns:1fr; } }
   .col { border:1px solid var(--line); background:rgba(15,21,19,.45); border-radius:18px; padding:14px; }
+  /* Each column scrolls on its own, so a long backlog can't push Done off the
+     screen and the three stay side by side at a glance. */
+  .col .items {
+    max-height:22rem; overflow-y:auto; padding-right:4px;
+    mask-image: linear-gradient(to bottom, #000 0, #000 88%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 88%, transparent 100%);
+  }
+  .col .items::-webkit-scrollbar, .feed ol::-webkit-scrollbar { width:6px; }
+  .col .items::-webkit-scrollbar-thumb, .feed ol::-webkit-scrollbar-thumb {
+    background:rgba(255,255,255,.12); border-radius:99px;
+  }
   .col > h3 {
     margin:0 0 12px; font-size:.78rem; text-transform:uppercase; letter-spacing:.09em;
     color:var(--muted); display:flex; justify-content:space-between; align-items:center;
@@ -142,9 +155,13 @@
   .feed ol {
     margin:0; padding:0 18px 18px; list-style:none; max-height:22rem; overflow-y:auto;
     /* Older lines dissolve into the panel edge instead of being cut off. */
-    mask-image: linear-gradient(to bottom, #000 0, #000 75%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 75%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 45%, rgba(0,0,0,.35) 88%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 45%, rgba(0,0,0,.35) 88%, transparent 100%);
   }
+  /* The newest line is the one that matters — say so, rather than relying on
+     position alone. */
+  .feed li.newest .what { color:#fff; font-weight:600; }
+  .feed li.newest .when { color:var(--primary-300); }
   .feed li {
     display:flex; gap:10px; padding:7px 0; border-top:1px solid var(--line-soft); font-size:.87rem;
     transition:opacity .3s ease;
@@ -516,13 +533,15 @@
       col.appendChild(el('p', 'dim', kind === 'doing' ? 'Nothing in flight' : 'Nothing here'))
       return col
     }
+    var list = el('div', 'items')
     items.forEach(function (item) {
       var node = el('div', 'item clamped' + (item.done ? ' is-done' : '') + (kind === 'doing' ? ' is-doing' : ''))
       node.appendChild(el('div', 'txt', item.text))
       if (item.section) node.appendChild(el('div', 'sec', item.section))
       node.addEventListener('click', function () { node.classList.toggle('clamped') })
-      col.appendChild(node)
+      list.appendChild(node)
     })
+    col.appendChild(list)
     return col
   }
 
@@ -587,10 +606,13 @@
         return
       }
       shown.slice(0, 80).forEach(function (entry, index) {
-        var row = el('li', 'k-' + entry.kind + (painted && !seenPainted.has(entry.key) ? ' fresh' : ''))
+        var row = el('li', 'k-' + entry.kind
+          + (index === 0 ? ' newest' : '')
+          + (painted && !seenPainted.has(entry.key) ? ' fresh' : ''))
         seenPainted.add(entry.key)
-        // Newest reads at full strength; older lines recede rather than compete.
-        row.style.opacity = index < 2 ? 1 : Math.max(0.35, 1 - (index - 1) * 0.09)
+        // Recency has to be obvious at a glance, so the ramp is steep: the top
+        // line is fully lit and older ones drop away quickly.
+        row.style.opacity = index === 0 ? 1 : Math.max(0.28, 1 - index * 0.13)
         row.appendChild(el('span', 'when', clockOf(entry.at)))
         row.appendChild(el('span', 'who', botLabel(entry.worker)))
         var what = el('span', 'what', entry.kind === 'you' ? 'You: ' + entry.text : entry.text)
