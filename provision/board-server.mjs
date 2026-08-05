@@ -845,6 +845,22 @@ function phraseForTool (name, input) {
  * Turn one transcript line into at most a few feed events. tool_result blocks
  * are deliberately dropped: they carry whole file contents and command output.
  */
+/**
+ * Not everything with role "user" came from the human. Claude Code injects
+ * task notifications, system reminders and command output through the same
+ * channel, and a raw <task-notification> blob in the feed reads as if the
+ * owner typed it. Telegram messages arrive wrapped in <channel …> — unwrap
+ * those and keep only what the person actually said.
+ */
+const HARNESS_NOISE = /^\s*<(task-notification|system-reminder|local-command|command-name|command-message|command-args)\b/i
+
+function humanText (text) {
+  if (HARNESS_NOISE.test(text)) return ''
+  const channel = /<channel\b[^>]*>([\s\S]*?)<\/channel>/i.exec(text)
+  const inner = channel ? channel[1] : text
+  return inner.replace(/<[^>]{1,80}>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 function eventsFromLine (line, worker) {
   let record
   try {
@@ -863,7 +879,8 @@ function eventsFromLine (line, worker) {
   const events = []
 
   if (typeof content === 'string') {
-    const text = redact(clip(content.trim(), 240))
+    const raw = type === 'user' ? humanText(content) : content.trim()
+    const text = redact(clip(raw, 240))
     if (text) events.push({ at, worker, kind: type === 'user' ? 'you' : 'says', text })
     return events
   }
@@ -872,7 +889,8 @@ function eventsFromLine (line, worker) {
   for (const block of content) {
     if (!block || typeof block !== 'object') continue
     if (block.type === 'text' && typeof block.text === 'string') {
-      const text = redact(clip(block.text.trim(), 240))
+      const raw = type === 'user' ? humanText(block.text) : block.text.trim()
+      const text = redact(clip(raw, 240))
       if (text) events.push({ at, worker, kind: type === 'user' ? 'you' : 'says', text })
     } else if (block.type === 'tool_use' && type === 'assistant') {
       events.push({ at, worker, kind: 'tool', text: redact(phraseForTool(block.name, block.input)) })
@@ -1243,6 +1261,7 @@ export {
   confirmPage,
   consumeLoginToken,
   eventsFromLine,
+  humanText,
   loginTokenValid,
   matchItem,
   parseChecklist,

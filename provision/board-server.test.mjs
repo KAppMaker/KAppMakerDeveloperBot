@@ -241,3 +241,33 @@ describe('board payloads', () => {
     assert.equal(habit.total, 2)
   })
 })
+
+describe('the feed shows people, not plumbing', () => {
+  const userLine = (text) => JSON.stringify({
+    type: 'user',
+    timestamp: '2026-08-05T10:00:00Z',
+    message: { content: text },
+  })
+
+  it('drops harness injections that are not the owner talking', () => {
+    for (const noise of [
+      '<task-notification>\n<task-id>abc</task-id>\n</task-notification>',
+      '<system-reminder>do the thing</system-reminder>',
+      '<local-command-stdout>output</local-command-stdout>',
+    ]) {
+      assert.deepEqual(board.eventsFromLine(userLine(noise), 'app1'), [], `should drop: ${noise.slice(0, 24)}`)
+    }
+  })
+
+  it('unwraps a Telegram message down to what was actually said', () => {
+    const wrapped = '<channel source="telegram" chat_id="1" user="me">build me a habit tracker</channel>'
+    const events = board.eventsFromLine(userLine(wrapped), 'app1')
+    assert.equal(events.length, 1)
+    assert.equal(events[0].kind, 'you')
+    assert.equal(events[0].text, 'build me a habit tracker')
+  })
+
+  it('keeps a plain message intact', () => {
+    assert.equal(board.humanText('add dark mode please'), 'add dark mode please')
+  })
+})
