@@ -164,17 +164,19 @@ install -d -o "$DEVUSER" -g "$DEVUSER" "/home/$DEVUSER/bin"
 
 # Persist the (secret-free, signed) callback URL so the runner can report
 # "setup_complete" to the control plane once the customer finishes setup.
-if [[ -n "$SERVER_CALLBACK_URL" || -n "${SERVER_KEY_URL:-}" ]]; then
+if [[ -n "$SERVER_CALLBACK_URL" || -n "${SERVER_KEY_URL:-}" || -n "${KAPP_MAX_BOTS:-}" ]]; then
   install -d -o "$DEVUSER" -g "$DEVUSER" "/home/$DEVUSER/.config/kappmaker"
   KAPP_ENV_FILE="/home/$DEVUSER/.config/kappmaker/env"
   # MERGE, never truncate: setup-vps.sh stores the toolchain env (JAVA_HOME,
   # ANDROID_SDK_ROOT, PATH…) in this same file — clobbering it would strip the
   # build tools from claude-telegram.service's environment.
   touch "$KAPP_ENV_FILE"
-  sed -i '/^SERVER_CALLBACK_URL=/d; /^SERVER_KEY_URL=/d' "$KAPP_ENV_FILE"
+  sed -i '/^SERVER_CALLBACK_URL=/d; /^SERVER_KEY_URL=/d; /^KAPP_MAX_BOTS=/d' "$KAPP_ENV_FILE"
   {
     [[ -n "$SERVER_CALLBACK_URL" ]] && printf 'SERVER_CALLBACK_URL=%q\n' "$SERVER_CALLBACK_URL"
     [[ -n "${SERVER_KEY_URL:-}" ]] && printf 'SERVER_KEY_URL=%q\n' "${SERVER_KEY_URL:-}"
+    # How many always-on workers this tier allows (kappmaker-add-bot reads it).
+    printf 'KAPP_MAX_BOTS=%q\n' "${KAPP_MAX_BOTS:-1}"
   } >> "$KAPP_ENV_FILE"
   chown "$DEVUSER:$DEVUSER" "$KAPP_ENV_FILE"
   chmod 600 "$KAPP_ENV_FILE"
@@ -182,6 +184,22 @@ fi
 curl -fsSL "$PROVISION_BASE_URL/claude-telegram-run.sh" -o "/home/$DEVUSER/bin/claude-telegram-run.sh"
 chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/bin/claude-telegram-run.sh"
 chmod +x "/home/$DEVUSER/bin/claude-telegram-run.sh"
+
+# Runner for ADDITIONAL always-on workers (app2, app3, …) — bigger tiers build
+# several apps in parallel. The first worker keeps the dedicated runner above.
+curl -fsSL "$PROVISION_BASE_URL/claude-telegram-worker.sh" -o "/home/$DEVUSER/bin/claude-telegram-worker.sh"
+chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/bin/claude-telegram-worker.sh"
+chmod +x "/home/$DEVUSER/bin/claude-telegram-worker.sh"
+
+# Owner-facing helper: add another bot (guided, non-technical).
+curl -fsSL "$PROVISION_BASE_URL/add-bot.sh" -o /usr/local/bin/kappmaker-add-bot \
+  && chmod 755 /usr/local/bin/kappmaker-add-bot \
+  || warn "add-bot helper not installed (extra bots unavailable)"
+
+# Shared claim registry so parallel workers never edit the same project at once.
+curl -fsSL "$PROVISION_BASE_URL/claim.sh" -o /usr/local/bin/kappmaker-claim \
+  && chmod 755 /usr/local/bin/kappmaker-claim \
+  || warn "claim helper not installed (parallel workers could collide)"
 
 # Optional owner-run extra hardening: lock SSH to their private Tailscale
 # network (guided, fail-safe — refuses to touch UFW until the owner has proven
@@ -194,6 +212,16 @@ TMP_UNIT="$(mktemp)"
 curl -fsSL "$PROVISION_BASE_URL/claude-telegram.service" -o "$TMP_UNIT"
 sed "s/__DEVUSER__/$DEVUSER/g" "$TMP_UNIT" > /etc/systemd/system/claude-telegram.service
 rm -f "$TMP_UNIT"
+
+# Template unit for ADDITIONAL workers. Installed on every box but only
+# instantiated (claude-telegram@app2, …) when the customer adds a bot.
+TMP_TEMPLATE="$(mktemp)"
+if curl -fsSL "$PROVISION_BASE_URL/claude-telegram@.service" -o "$TMP_TEMPLATE"; then
+  sed "s/__DEVUSER__/$DEVUSER/g" "$TMP_TEMPLATE" > "/etc/systemd/system/claude-telegram@.service"
+else
+  warn "worker template unit not installed (extra bots unavailable)"
+fi
+rm -f "$TMP_TEMPLATE"
 
 systemctl daemon-reload
 # Enable + start: it will harmlessly wait-and-restart until the customer finishes setup.

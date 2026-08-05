@@ -1,0 +1,31 @@
+# Additional always-on Claude Code + Telegram worker (systemd TEMPLATE unit).
+# Instance name is the box-side worker id: claude-telegram@app2, @app3, …
+# Installed by provision/bootstrap.sh; instances are enabled by
+# /usr/local/bin/kappmaker-add-bot when the customer adds a bot.
+#
+# The FIRST worker keeps its own dedicated claude-telegram.service — that is the
+# verified single-bot path and stays untouched.
+
+[Unit]
+Description=KAppMaker AI — always-on Claude Code + Telegram (worker %i)
+After=network-online.target claude-telegram.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__DEVUSER__
+WorkingDirectory=/home/__DEVUSER__/workspaces/%i
+ExecStart=/home/__DEVUSER__/bin/claude-telegram-worker.sh %i
+# Keep it alive: restart on crash AND while waiting for the customer to add
+# this worker's bot token.
+Restart=always
+RestartSec=15
+StartLimitIntervalSec=0
+# Prefer killing a heavy build over an always-on bot when memory runs low.
+OOMScoreAdjust=-500
+# systemd does not read ~/.bashrc — load the toolchain env (JAVA_HOME, PATH, …).
+Environment=HOME=/home/__DEVUSER__
+EnvironmentFile=-/home/__DEVUSER__/.config/kappmaker/env
+
+[Install]
+WantedBy=multi-user.target
