@@ -552,9 +552,12 @@
     feedRaf = requestAnimationFrame(function () {
       feedRaf = null
       clear(feedList)
-      var shown = feedFilter
+      // Events are collected one worker at a time, so arrival order is not
+      // time order — sort newest-first or a quiet bot's old lines sit on top.
+      var shown = (feedFilter
         ? feed.filter(function (entry) { return feedFilter.indexOf(entry.worker) !== -1 })
-        : feed
+        : feed.slice()
+      ).sort(function (a, b) { return Date.parse(b.at) - Date.parse(a.at) })
       if (shown.length === 0) {
         var idle = el('li')
         idle.appendChild(el('span', 'what muted', feedFilter
