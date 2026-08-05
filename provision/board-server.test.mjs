@@ -271,3 +271,40 @@ describe('the feed shows people, not plumbing', () => {
     assert.equal(board.humanText('add dark mode please'), 'add dark mode please')
   })
 })
+
+describe('the polled feed', () => {
+  const SESSION = 'sess-feedtest-0001'
+  const dir = path.join(CLAUDE, 'projects/-home-devuser-projects')
+  const file = path.join(dir, `${SESSION}.jsonl`)
+
+  const append = (row) => fs.appendFileSync(file, JSON.stringify(row) + '\n')
+
+  before(() => {
+    fs.mkdirSync(path.join(CLAUDE, 'sessions'), { recursive: true })
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(file, '')
+    // A live worker whose cwd is ~/projects, i.e. app1.
+    fs.writeFileSync(path.join(CLAUDE, 'sessions', `${process.pid}.json`), JSON.stringify({
+      pid: process.pid, sessionId: SESSION, cwd: PROJECTS,
+    }))
+  })
+
+  it('hands a fresh page recent history, then only what is new', () => {
+    append({ type: 'assistant', timestamp: '2026-08-05T10:00:00Z', message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: './gradlew build' } }] } })
+
+    const first = board.feedSince(0)
+    assert.ok(first.events.length >= 1, 'a fresh page sees recent activity')
+    assert.ok(first.seq > 0)
+    assert.ok(first.events.some((e) => e.text.includes('gradlew build')))
+
+    // Nothing new yet.
+    assert.deepEqual(board.feedSince(first.seq).events, [])
+
+    // The agent does something else.
+    append({ type: 'assistant', timestamp: '2026-08-05T10:00:05Z', message: { content: [{ type: 'text', text: 'Build finished' }] } })
+    const next = board.feedSince(first.seq)
+    assert.equal(next.events.length, 1)
+    assert.equal(next.events[0].text, 'Build finished')
+    assert.ok(next.seq > first.seq, 'the cursor moves forward')
+  })
+})

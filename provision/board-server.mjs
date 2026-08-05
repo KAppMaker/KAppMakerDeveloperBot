@@ -63,9 +63,6 @@ const DEFAULT_PROGRESS_FILE = 'PROGRESS_FEATURES.md'
 const GIT_CACHE_MS = 10_000
 const GIT_TIMEOUT_MS = 4_000
 const GIT_MAX_CONCURRENT = 2
-// One phone plus a laptop plus a reconnect blip must not lock anyone out — the
-// old cap of 2 did exactly that on a real box ("too many live viewers").
-const MAX_SSE_CLIENTS = 8
 const BUSY_WINDOW_MS = 2 * 60 * 1000              // "working" = wrote something recently
 const SSE_MAX_MS = 30 * 60 * 1000                 // drop the stream after 30 min
 const TAIL_WINDOW = 32 * 1024                     // transcripts run to tens of MB
@@ -900,126 +897,96 @@ function eventsFromLine (line, worker) {
   return events
 }
 
-// A Set, not a counter: a counter that misses a single cleanup leaks a slot
-// forever and eventually locks the owner out of their own board.
-const sseClients = new Set()
+/**
+ * The live feed, polled rather than streamed.
+ *
+ * This was Server-Sent Events first, and it worked perfectly on loopback — and
+ * not at all in a browser, because Cloudflare's edge buffers the response and
+ * nothing ever arrives. The tunnel is how EVERY customer reaches their board,
+ * so streaming was never going to work. Polling a plain JSON endpoint goes
+ * through any proxy, needs no connection cap, and survives a page refresh by
+ * construction.
+ *
+ * The server keeps a small ring buffer of recent events with a monotonic
+ * sequence number; the page asks for everything newer than what it has.
+ */
+const FEED_MAX = 300
+const feedBuffer = []
+let feedSeq = 0
+const tails = new Map()
 
-function startStream (req, res) {
-  for (const client of sseClients) {
-    if (client.writableEnded || client.destroyed || !client.writable) sseClients.delete(client)
-  }
+function collectFeed () {
+  for (const worker of liveWorkers()) {
+    const file = worker.transcript
+    if (!file) continue
 
-  // Refreshing the page is the most common thing a viewer does, and through the
-  // tunnel the previous connection can linger server-side for a while after the
-  // browser has gone — so a cap that REJECTS would lock the owner out of their
-  // own board after a few refreshes. Evict the oldest stream instead: the
-  // person in front of the screen always wins.
-  while (sseClients.size >= MAX_SSE_CLIENTS) {
-    const oldest = sseClients.values().next().value
-    sseClients.delete(oldest)
-    try {
-      oldest.end()
-    } catch { /* already gone */ }
-  }
-  sseClients.add(res)
-
-  res.writeHead(200, {
-    ...securityHeaders(),
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-store',
-    Connection: 'keep-alive',
-  })
-  res.write('retry: 5000\n\n')
-
-  const tails = new Map()
-
-  const attach = () => {
-    for (const worker of liveWorkers()) {
-      if (tails.has(worker.worker)) continue
-      const file = worker.transcript
-      if (!file) continue
+    let tail = tails.get(worker.worker)
+    if (!tail || tail.file !== file) {
       let size = 0
       try {
         size = fs.statSync(file).size
       } catch {
         continue
       }
-      // Start one window back so the viewer sees context immediately.
-      tails.set(worker.worker, { file, pos: Math.max(0, size - TAIL_WINDOW), carry: '', primed: false })
+      // Start one window back so a fresh page already has context to show.
+      const from = Math.max(0, size - TAIL_WINDOW)
+      // Only a window that starts MID-file has a broken first line to discard.
+      // Starting at byte 0 (a short or brand-new transcript) has a perfectly
+      // good first line, and dropping it silently ate the first event.
+      tail = { file, pos: from, carry: '', primed: from === 0 }
+      tails.set(worker.worker, tail)
     }
-  }
 
-  const pump = () => {
-    attach()
-    for (const [worker, tail] of tails) {
-      let stat
-      try {
-        stat = fs.statSync(tail.file)
-      } catch {
-        tails.delete(worker)
-        continue
-      }
-      if (stat.size < tail.pos) tail.pos = 0          // rotated/truncated
-      if (stat.size === tail.pos) continue
-
-      const length = Math.min(stat.size - tail.pos, TAIL_WINDOW)
-      const buffer = Buffer.alloc(length)
-      let fd
-      try {
-        fd = fs.openSync(tail.file, 'r')
-        fs.readSync(fd, buffer, 0, length, tail.pos)
-      } catch {
-        continue
-      } finally {
-        if (fd !== undefined) try { fs.closeSync(fd) } catch { /* ignore */ }
-      }
-      tail.pos += length
-
-      const chunk = tail.carry + buffer.toString('utf8')
-      const lines = chunk.split('\n')
-      tail.carry = lines.pop() || ''                  // keep the partial line
-
-      // The first window starts mid-file, so its first line is usually a
-      // fragment — drop it rather than emit garbage.
-      if (!tail.primed) {
-        tail.primed = true
-        lines.shift()
-      }
-
-      for (const line of lines) {
-        if (line.trim() === '') continue
-        for (const event of eventsFromLine(line, worker)) {
-          res.write(`data: ${JSON.stringify(event)}\n\n`)
-        }
-      }
-    }
-  }
-
-  const poll = setInterval(pump, STREAM_POLL_MS)
-  // The heartbeat doubles as liveness detection: a peer that went away without
-  // a clean close is noticed here rather than holding a slot for 30 minutes.
-  const beat = setInterval(() => {
-    if (res.destroyed || !res.writable) {
-      cleanup()
-      return
-    }
+    let stat
     try {
-      res.write(': ping\n\n')
+      stat = fs.statSync(file)
     } catch {
-      cleanup()
+      tails.delete(worker.worker)
+      continue
     }
-  }, 20_000)
-  const stop = setTimeout(() => res.end(), SSE_MAX_MS)
-  pump()
+    if (stat.size < tail.pos) tail.pos = 0            // rotated or truncated
+    if (stat.size === tail.pos) continue
 
-  const cleanup = () => {
-    clearInterval(poll)
-    clearInterval(beat)
-    clearTimeout(stop)
-    sseClients.delete(res)
+    const length = Math.min(stat.size - tail.pos, TAIL_WINDOW)
+    const buffer = Buffer.alloc(length)
+    let fd
+    try {
+      fd = fs.openSync(file, 'r')
+      fs.readSync(fd, buffer, 0, length, tail.pos)
+    } catch {
+      continue
+    } finally {
+      if (fd !== undefined) try { fs.closeSync(fd) } catch { /* ignore */ }
+    }
+    tail.pos += length
+
+    const lines = (tail.carry + buffer.toString('utf8')).split('\n')
+    tail.carry = lines.pop() || ''                    // keep the partial line
+
+    // The first window starts mid-file, so its first line is usually a
+    // fragment — drop it rather than emit garbage.
+    if (!tail.primed) {
+      tail.primed = true
+      lines.shift()
+    }
+
+    for (const line of lines) {
+      if (line.trim() === '') continue
+      for (const event of eventsFromLine(line, worker.worker)) {
+        feedSeq += 1
+        feedBuffer.push({ ...event, seq: feedSeq })
+      }
+    }
   }
-  req.on('close', cleanup)
-  res.on('close', cleanup)
+
+  if (feedBuffer.length > FEED_MAX) feedBuffer.splice(0, feedBuffer.length - FEED_MAX)
+}
+
+function feedSince (since) {
+  collectFeed()
+  const from = Number.isFinite(since) && since > 0 ? since : 0
+  const events = from === 0 ? feedBuffer.slice(-40) : feedBuffer.filter((event) => event.seq > from)
+  return { seq: feedSeq, events }
 }
 
 // -------------------------------------------------------------------- http
@@ -1247,8 +1214,8 @@ async function handle (req, res) {
     sendJson(res, 200, await buildState())
     return
   }
-  if (route === '/api/stream') {
-    startStream(req, res)
+  if (route === '/api/feed') {
+    sendJson(res, 200, feedSince(Number(url.searchParams.get('since'))))
     return
   }
 
@@ -1281,6 +1248,7 @@ export {
   confirmPage,
   consumeLoginToken,
   eventsFromLine,
+  feedSince,
   humanText,
   loginTokenValid,
   matchItem,

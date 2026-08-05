@@ -201,7 +201,8 @@
 
   var state = null
   var pollTimer = null
-  var source = null
+  var feedTimer = null
+  var feedSeq = 0
   var feed = []          // newest first, capped
   var FEED_MAX = 200
   var feedFilter = null  // null = every bot; otherwise the workers on one app
@@ -574,21 +575,30 @@
     })
   }
 
-  function connectStream () {
-    if (source) { source.close(); source = null }
-    source = new EventSource('/api/stream')
-    source.onopen = function () { feedDot.className = 'dot live' }
-    source.onmessage = function (message) {
-      try { pushFeedEvent(JSON.parse(message.data)) } catch (e) { /* ignore malformed frame */ }
-    }
-    source.onerror = function () {
-      feedDot.className = 'dot idle'
-      // EventSource retries on its own; only reconnect by hand if it gave up.
-      if (source && source.readyState === 2) {
-        source = null
-        setTimeout(function () { if (!document.hidden) connectStream() }, 5000)
-      }
-    }
+  // Polled, not streamed. Server-Sent Events worked on loopback and never
+  // arrived in a browser, because the Cloudflare tunnel every board is reached
+  // through buffers the response. Polling gets through any proxy and needs no
+  // reconnect handling.
+  function pollFeed () {
+    return fetch('/api/feed?since=' + feedSeq, { credentials: 'same-origin' })
+      .then(function (res) {
+        if (res.status === 401) { location.reload(); throw new Error('signed out') }
+        if (!res.ok) throw new Error('feed unavailable')
+        return res.json()
+      })
+      .then(function (data) {
+        feedSeq = data.seq || feedSeq
+        ;(data.events || []).forEach(pushFeedEvent)
+        feedDot.className = 'dot ' + ((data.events || []).length ? 'live' : 'idle')
+        if (!(data.events || []).length) renderFeed()
+      })
+      .catch(function () { feedDot.className = 'dot idle' })
+  }
+
+  function startFeed () {
+    clearInterval(feedTimer)
+    pollFeed()
+    feedTimer = setInterval(function () { if (!document.hidden) pollFeed() }, 3000)
   }
 
   // ------------------------------------------------------------------ routing
@@ -628,16 +638,12 @@
 
   window.addEventListener('hashchange', refresh)
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      if (source) { source.close(); source = null; feedDot.className = 'dot idle' }
-    } else {
-      refresh(); connectStream()
-    }
+    if (!document.hidden) { refresh(); pollFeed() }
   })
 
   refresh()
   schedule()
-  connectStream()
+  startFeed()
 })()
 </script>
 </body>
