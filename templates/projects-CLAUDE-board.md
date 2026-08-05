@@ -32,12 +32,27 @@ done.
 working where. If you forget, the board falls back to guessing from the files
 you touched — the claim is more accurate, so record it.
 
+### When the owner asks about progress, offer the board
+
+Any question about **state** — "what's the progress?", "what's left?", "what
+have you built?", "what are you working on?", "show me the tasks/features",
+"how is <app> going?" — gets your normal answer **plus** the board link, on its
+own line at the end. Something like:
+
+> …and you can see all of it here: <link>
+
+The board shows every app at once, with live activity — most of these questions
+are better answered by looking than by reading a list in chat. Do this the
+first time they ask in a conversation; don't repeat the link in every message.
+
 ### When the owner asks for their board
 
 Run `kappmaker-board link` and send them the URL it prints, in your reply.
 
 - That command turns the board on if it is off, and prints a link that **works
-  once and expires in 10 minutes**.
+  once and expires in 10 minutes**. Opening it shows a "Open my board" button —
+  one tap, because chat apps fetch links to build previews and that must not
+  spend the link. Mint a fresh one whenever they need it; they are free.
 - Send it **only in the reply**. Never write it into a file, a commit message, a
   log, or a project's README — it is a key to their board while it lasts.
 - "Turn my board off" → `kappmaker-board off`. "Sign me out everywhere" →

@@ -240,7 +240,25 @@ function dropSession (req) {
 }
 
 /**
- * Consume a one-time login token. `kappmaker-board link` created the file named
+ * Is this login token real and still inside its window? Does NOT spend it.
+ *
+ * Chat apps and link scanners fetch a URL the moment it is posted, to build a
+ * preview. If the GET consumed the token, Telegram's own preview crawler would
+ * burn the customer's link before they ever tapped it — which is exactly what
+ * happened on a real box. So GET only looks; POST spends.
+ */
+function loginTokenValid (token) {
+  if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) return false
+  try {
+    const stat = fs.statSync(path.join(STATE_DIR, 'tokens', sha256(token)))
+    return Date.now() - stat.mtimeMs <= TOKEN_TTL_MS
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Spend a one-time login token. `kappmaker-board link` created the file named
  * after the token's SHA-256; renaming it is the atomic claim, so a replayed
  * link loses the race and gets nothing. TTL comes from the file's mtime.
  */
@@ -928,7 +946,8 @@ function securityHeaders () {
       "img-src 'self' data:",
       "connect-src 'self'",
       "base-uri 'none'",
-      "form-action 'none'",
+      // 'self', not 'none': the tap-to-sign-in page posts its token back here.
+      "form-action 'self'",
       "frame-ancestors 'none'",
     ].join('; '),
   }
@@ -985,6 +1004,55 @@ p{margin:0;color:#a3a3a3}
 fresh one that works once.</p>
 </div></body></html>`
 
+/**
+ * The tap-to-continue page. A preview crawler renders this and spends nothing;
+ * only the human's POST consumes the token.
+ */
+function confirmPage (token) {
+  return `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Project board</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0f0e;color:#e5e5e5;
+font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}
+.card{max-width:26rem;text-align:center;border:1px solid rgba(255,255,255,.1);
+background:rgba(15,21,19,.6);border-radius:24px;padding:40px 32px}
+h1{margin:0 0 12px;font-size:1.35rem}
+p{margin:0 0 24px;color:#a3a3a3}
+button{font:inherit;font-weight:650;border:0;cursor:pointer;border-radius:99px;
+background:#10b981;color:#06120e;padding:12px 28px}
+button:hover{background:#34d399}
+.dot{display:inline-block;width:8px;height:8px;border-radius:99px;background:#10b981;margin-right:8px}
+</style></head>
+<body><div class="card">
+<h1><span class="dot"></span>Your project board</h1>
+<p>Tap to sign in on this device. This link works once.</p>
+<form method="POST" action="/login">
+<input type="hidden" name="t" value="${token.replace(/[^a-f0-9]/g, '')}">
+<button type="submit">Open my board</button>
+</form>
+</div></body></html>`
+}
+
+/** Read a small urlencoded body. Capped — nothing here needs a large payload. */
+function readBody (req, limit = 4096) {
+  return new Promise((resolve) => {
+    let data = ''
+    req.on('data', (chunk) => {
+      data += chunk
+      if (data.length > limit) {
+        data = ''
+        req.destroy()
+        resolve(null)
+      }
+    })
+    req.on('end', () => resolve(data))
+    req.on('error', () => resolve(null))
+  })
+}
+
 function serveUi (res) {
   const html = readFileSafe(UI_FILE)
   if (html === null) {
@@ -1004,14 +1072,33 @@ async function handle (req, res) {
     return
   }
 
-  // Login: consume the one-time token minted by `kappmaker-board link`.
+  // Login, step 1: look at the token but never spend it — a chat app's link
+  // preview crawler hits this the moment the bot sends the message.
   if (route === '/login' && req.method === 'GET') {
     if (!allowRequest(`login:${clientKey(req)}`, 1, 10, 0.2)) {
       res.writeHead(429, { ...securityHeaders(), 'Content-Type': 'text/plain' })
       res.end('too many attempts')
       return
     }
-    if (!consumeLoginToken(url.searchParams.get('t') || '')) {
+    const token = url.searchParams.get('t') || ''
+    if (!loginTokenValid(token)) {
+      sendHtml(res, 401, LOGIN_PAGE)
+      return
+    }
+    sendHtml(res, 200, confirmPage(token))
+    return
+  }
+
+  // Login, step 2: the human tapped. Spend the token and sign them in.
+  if (route === '/login' && req.method === 'POST') {
+    if (!allowRequest(`login:${clientKey(req)}`, 1, 10, 0.2)) {
+      res.writeHead(429, { ...securityHeaders(), 'Content-Type': 'text/plain' })
+      res.end('too many attempts')
+      return
+    }
+    const body = await readBody(req)
+    const token = body === null ? '' : (new URLSearchParams(body).get('t') || '')
+    if (!consumeLoginToken(token)) {
       sendHtml(res, 401, LOGIN_PAGE)
       return
     }
@@ -1101,8 +1188,10 @@ const server = createServer((req, res) => {
 export {
   buildProject,
   buildState,
+  confirmPage,
   consumeLoginToken,
   eventsFromLine,
+  loginTokenValid,
   matchItem,
   parseChecklist,
   phraseForTool,

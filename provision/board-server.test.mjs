@@ -156,6 +156,26 @@ describe('one-time login links', () => {
     assert.equal(board.consumeLoginToken(token), false, 'a replayed link must not work')
   })
 
+  it('survives a link-preview crawler fetching it first', () => {
+    // Telegram (and every link scanner) GETs a URL the moment it is posted.
+    // Looking must never spend the token, or the customer's link is dead
+    // before they tap it — this happened on a real box.
+    const token = mint()
+    assert.equal(board.loginTokenValid(token), true, 'the crawler looks…')
+    assert.equal(board.loginTokenValid(token), true, '…as many times as it likes')
+    assert.equal(board.consumeLoginToken(token), true, 'and the human can still sign in')
+    assert.equal(board.loginTokenValid(token), false, 'but only once')
+  })
+
+  it('puts only the sanitised token into the tap-to-sign-in page', () => {
+    const page = board.confirmPage('abc123"><script>alert(1)</script>')
+    assert.equal(page.includes('<script>alert(1)'), false)
+    assert.equal(page.includes('alert'), false, 'nothing injected survives')
+    const value = /name="t" value="([^"]*)"/.exec(page)[1]
+    assert.match(value, /^[a-f0-9]*$/, 'only hex survives into the form')
+    assert.match(page, /method="POST"/)
+  })
+
   it('rejects tokens that were never minted, and junk', () => {
     assert.equal(board.consumeLoginToken(randomBytes(32).toString('hex')), false)
     assert.equal(board.consumeLoginToken('../../etc/passwd'), false)
