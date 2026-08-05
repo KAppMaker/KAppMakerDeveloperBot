@@ -906,12 +906,20 @@ const sseClients = new Set()
 
 function startStream (req, res) {
   for (const client of sseClients) {
-    if (client.writableEnded || client.destroyed) sseClients.delete(client)
+    if (client.writableEnded || client.destroyed || !client.writable) sseClients.delete(client)
   }
-  if (sseClients.size >= MAX_SSE_CLIENTS) {
-    res.writeHead(503, { 'Content-Type': 'text/plain' })
-    res.end('too many live viewers')
-    return
+
+  // Refreshing the page is the most common thing a viewer does, and through the
+  // tunnel the previous connection can linger server-side for a while after the
+  // browser has gone — so a cap that REJECTS would lock the owner out of their
+  // own board after a few refreshes. Evict the oldest stream instead: the
+  // person in front of the screen always wins.
+  while (sseClients.size >= MAX_SSE_CLIENTS) {
+    const oldest = sseClients.values().next().value
+    sseClients.delete(oldest)
+    try {
+      oldest.end()
+    } catch { /* already gone */ }
   }
   sseClients.add(res)
 
@@ -988,7 +996,19 @@ function startStream (req, res) {
   }
 
   const poll = setInterval(pump, STREAM_POLL_MS)
-  const beat = setInterval(() => res.write(': ping\n\n'), 20_000)
+  // The heartbeat doubles as liveness detection: a peer that went away without
+  // a clean close is noticed here rather than holding a slot for 30 minutes.
+  const beat = setInterval(() => {
+    if (res.destroyed || !res.writable) {
+      cleanup()
+      return
+    }
+    try {
+      res.write(': ping\n\n')
+    } catch {
+      cleanup()
+    }
+  }, 20_000)
   const stop = setTimeout(() => res.end(), SSE_MAX_MS)
   pump()
 
