@@ -206,6 +206,18 @@ curl -fsSL "$PROVISION_BASE_URL/claim.sh" -o /usr/local/bin/kappmaker-claim \
   && chmod 755 /usr/local/bin/kappmaker-claim \
   || warn "claim helper not installed (parallel workers could collide)"
 
+# Persistent memory across sessions. The always-on bot is restarted by systemd
+# on OOM, on reboot and on every deploy; without this each restart starts
+# amnesiac. Installs as a Claude Code plugin and coexists with the
+# session-history Stop hook. Guarded: never abort provisioning over it.
+if curl -fsSL "$PROVISION_BASE_URL/claude-mem-install.sh" -o /usr/local/bin/kappmaker-claude-mem-install; then
+  chmod 755 /usr/local/bin/kappmaker-claude-mem-install
+  sudo -u "$DEVUSER" -H /usr/local/bin/kappmaker-claude-mem-install >/dev/null 2>&1 \
+    || warn "claude-mem not installed (the box works fine without it)"
+else
+  warn "claude-mem installer not fetched"
+fi
+
 # Read-only project board: a window onto ~/projects (checklists, git activity,
 # what each worker is doing right now). INSTALLED BUT OFF — it starts nothing
 # and opens no port until the owner asks their bot for it. Guarded: a box's
