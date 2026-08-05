@@ -139,8 +139,19 @@
     font-weight:600; font-size:.95rem;
   }
   .feed > summary::-webkit-details-marker { display:none; }
-  .feed ol { margin:0; padding:0 18px 18px; list-style:none; max-height:22rem; overflow-y:auto; }
-  .feed li { display:flex; gap:10px; padding:7px 0; border-top:1px solid var(--line-soft); font-size:.87rem; }
+  .feed ol {
+    margin:0; padding:0 18px 18px; list-style:none; max-height:22rem; overflow-y:auto;
+    /* Older lines dissolve into the panel edge instead of being cut off. */
+    mask-image: linear-gradient(to bottom, #000 0, #000 75%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 75%, transparent 100%);
+  }
+  .feed li {
+    display:flex; gap:10px; padding:7px 0; border-top:1px solid var(--line-soft); font-size:.87rem;
+    transition:opacity .3s ease;
+  }
+  /* The line that just arrived gets a moment of emphasis. */
+  @keyframes arrive { from { background:rgba(16,185,129,.14); } to { background:transparent; } }
+  .feed li.fresh { animation:arrive 1.4s ease-out; }
   .feed li:first-child { border-top:0; }
   .feed .when { color:var(--dim); font-variant-numeric:tabular-nums; flex:none; font-size:.78rem; padding-top:2px; }
   .feed .who { color:var(--primary-300); flex:none; font-size:.78rem; padding-top:2px; }
@@ -207,6 +218,8 @@
   var FEED_MAX = 200
   var feedFilter = null  // null = every bot; otherwise the workers on one app
   var seenEvents = new Set()
+  var seenPainted = new Set()   // rows already drawn once — only new ones flash
+  var painted = false           // skip the flash on the very first paint
 
   // ---------------------------------------------------------------- helpers
 
@@ -562,6 +575,9 @@
         ? feed.filter(function (entry) { return feedFilter.indexOf(entry.worker) !== -1 })
         : feed.slice()
       ).sort(function (a, b) { return Date.parse(b.at) - Date.parse(a.at) })
+      // Give every entry a stable key for the arrival highlight.
+      shown.forEach(function (entry) { entry.key = entry.worker + '|' + entry.at + '|' + entry.text })
+
       if (shown.length === 0) {
         var idle = el('li')
         idle.appendChild(el('span', 'what muted', feedFilter
@@ -570,8 +586,11 @@
         feedList.appendChild(idle)
         return
       }
-      shown.slice(0, 80).forEach(function (entry) {
-        var row = el('li', 'k-' + entry.kind)
+      shown.slice(0, 80).forEach(function (entry, index) {
+        var row = el('li', 'k-' + entry.kind + (painted && !seenPainted.has(entry.key) ? ' fresh' : ''))
+        seenPainted.add(entry.key)
+        // Newest reads at full strength; older lines recede rather than compete.
+        row.style.opacity = index < 2 ? 1 : Math.max(0.35, 1 - (index - 1) * 0.09)
         row.appendChild(el('span', 'when', clockOf(entry.at)))
         row.appendChild(el('span', 'who', botLabel(entry.worker)))
         var what = el('span', 'what', entry.kind === 'you' ? 'You: ' + entry.text : entry.text)
@@ -579,6 +598,7 @@
         row.appendChild(what)
         feedList.appendChild(row)
       })
+      painted = true
     }, 16)
   }
 
