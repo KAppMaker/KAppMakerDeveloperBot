@@ -187,9 +187,14 @@ chmod +x "/home/$DEVUSER/bin/claude-telegram-run.sh"
 
 # Runner for ADDITIONAL always-on workers (app2, app3, …) — bigger tiers build
 # several apps in parallel. The first worker keeps the dedicated runner above.
-curl -fsSL "$PROVISION_BASE_URL/claude-telegram-worker.sh" -o "/home/$DEVUSER/bin/claude-telegram-worker.sh"
-chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/bin/claude-telegram-worker.sh"
-chmod +x "/home/$DEVUSER/bin/claude-telegram-worker.sh"
+# Guarded: this box's single-bot promise does not depend on it, so a transient
+# fetch failure must never abort provisioning (we run under `set -e`).
+if curl -fsSL "$PROVISION_BASE_URL/claude-telegram-worker.sh" -o "/home/$DEVUSER/bin/claude-telegram-worker.sh"; then
+  chown "$DEVUSER:$DEVUSER" "/home/$DEVUSER/bin/claude-telegram-worker.sh"
+  chmod +x "/home/$DEVUSER/bin/claude-telegram-worker.sh"
+else
+  warn "extra-worker runner not installed (extra bots unavailable)"
+fi
 
 # Owner-facing helper: add another bot (guided, non-technical).
 curl -fsSL "$PROVISION_BASE_URL/add-bot.sh" -o /usr/local/bin/kappmaker-add-bot \
