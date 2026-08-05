@@ -546,11 +546,15 @@
     renderFeed()
   }
 
-  var feedRaf = null
+  var feedPaint = null
   function renderFeed () {
-    if (feedRaf) return
-    feedRaf = requestAnimationFrame(function () {
-      feedRaf = null
+    // setTimeout, not requestAnimationFrame: rAF never fires while the page is
+    // hidden or backgrounded, so events arrived and the list was simply never
+    // repainted — the feed looked permanently empty. A throttled timeout still
+    // fires. Coalesced so a burst of events paints once.
+    if (feedPaint) return
+    feedPaint = setTimeout(function () {
+      feedPaint = null
       clear(feedList)
       // Events are collected one worker at a time, so arrival order is not
       // time order — sort newest-first or a quiet bot's old lines sit on top.
@@ -575,7 +579,7 @@
         row.appendChild(what)
         feedList.appendChild(row)
       })
-    })
+    }, 16)
   }
 
   // Polled, not streamed. Server-Sent Events worked on loopback and never
@@ -595,7 +599,10 @@
         feedDot.className = 'dot ' + ((data.events || []).length ? 'live' : 'idle')
         if (!(data.events || []).length) renderFeed()
       })
-      .catch(function () { feedDot.className = 'dot idle' })
+      .catch(function (error) {
+        feedDot.className = 'dot idle'
+        if (error && error.message !== 'signed out') console.error('board feed:', error)
+      })
   }
 
   function startFeed () {
