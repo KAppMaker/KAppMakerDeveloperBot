@@ -13,6 +13,7 @@
 
 [Unit]
 Description=KAppMaker AI project board tunnel (outbound only)
+StartLimitIntervalSec=0
 After=network-online.target kappmaker-board.service
 Wants=network-online.target
 BindsTo=kappmaker-board.service
@@ -27,7 +28,6 @@ ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate \
   --url http://127.0.0.1:7788
 Restart=always
 RestartSec=10
-StartLimitIntervalSec=0
 
 NoNewPrivileges=yes
 ProtectSystem=strict

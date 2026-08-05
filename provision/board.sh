@@ -80,6 +80,11 @@ cmd_on() {
     sudo_n systemctl enable --now "$TUNNEL_UNIT" >/dev/null 2>&1 \
       || fail "Could not start the board tunnel."
   fi
+  # Starting the board counts as activity. Without this the idle timer below
+  # fires immediately (systemd runs a Persistent= timer whose interval already
+  # elapsed at boot), sees no last-seen, and shuts the board straight back down.
+  date -u +%s > "$STATE_DIR/last-seen"
+
   # So a board left on after a quick look does not stay exposed for weeks.
   sudo_n systemctl enable --now kappmaker-board-idle.timer >/dev/null 2>&1 || true
 
@@ -150,9 +155,13 @@ cmd_logout_all() {
 # IDLE_HOURS, take it back off the internet. `link` brings it straight back.
 cmd_idle_check() {
   unit_active "$TUNNEL_UNIT" || exit 0
-  local last=0
-  [[ -f "$STATE_DIR/last-seen" ]] && last="$(cat "$STATE_DIR/last-seen" 2>/dev/null || echo 0)"
-  [[ "$last" =~ ^[0-9]+$ ]] || last=0
+  # No last-seen means we have no evidence either way — never shut a board down
+  # on a guess. `on` always stamps this file, so absence is a broken state, not
+  # an idle one.
+  [[ -f "$STATE_DIR/last-seen" ]] || exit 0
+  local last
+  last="$(cat "$STATE_DIR/last-seen" 2>/dev/null || echo 0)"
+  [[ "$last" =~ ^[0-9]+$ ]] || exit 0
   local cutoff=$(( $(date -u +%s) - IDLE_HOURS * 3600 ))
   if (( last < cutoff )); then
     cmd_off >/dev/null

@@ -23,6 +23,7 @@
 
 [Unit]
 Description=KAppMaker AI project board (read-only, loopback)
+StartLimitIntervalSec=0
 After=network-online.target
 
 [Service]
@@ -34,7 +35,6 @@ WorkingDirectory=/home/__DEVUSER__
 ExecStart=/usr/bin/node /home/__DEVUSER__/bin/board-server.mjs
 Restart=always
 RestartSec=10
-StartLimitIntervalSec=0
 
 NoNewPrivileges=yes
 ProtectSystem=strict
