@@ -235,6 +235,18 @@
     return String(when.getHours()).padStart(2, '0') + ':' + String(when.getMinutes()).padStart(2, '0')
   }
 
+  // A bot is working if it says so, or if it wrote to its transcript just now.
+  // Claude Code only writes task files when it uses the task tool, so relying
+  // on those alone showed "idle" while the bot was visibly building.
+  function isBusy (bot) { return !!(bot && (bot.busy || (bot.task && bot.task.subject))) }
+
+  function doingText (bot) {
+    if (bot && bot.task && (bot.task.activeForm || bot.task.subject)) {
+      return bot.task.activeForm || bot.task.subject
+    }
+    return bot && bot.busy ? 'Working right now' : null
+  }
+
   function botLabel (worker) {
     var n = /app([0-9]+)/.exec(worker || '')
     return n ? 'Bot ' + n[1] : (worker || 'Your bot')
@@ -297,7 +309,7 @@
     clear(view)
 
     var workers = state.workers || []
-    var live = workers.filter(function (w) { return w.task && w.task.subject })
+    var live = workers.filter(isBusy)
     botsEl.hidden = workers.length === 0
     if (!botsEl.hidden) {
       clear(botsEl)
@@ -313,7 +325,7 @@
       var strip = el('div', 'card builders')
       strip.appendChild(el('h2', null, 'Your builders'))
       workers.forEach(function (worker) {
-        var busy = !!(worker.task && worker.task.subject)
+        var busy = isBusy(worker)
         var row = el('div', 'builder')
         row.appendChild(el('span', 'dot ' + (busy ? 'live' : 'idle')))
 
@@ -327,7 +339,7 @@
         }
         // One line when idle: "Bot 1 — waiting for you" said twice was noise.
         if (busy) {
-          line.appendChild(el('div', 'muted', worker.task.activeForm || worker.task.subject))
+          line.appendChild(el('div', 'muted', doingText(worker) || 'Working right now'))
         } else {
           line.appendChild(document.createTextNode(worker.project ? ' · waiting for you' : ' — waiting for you'))
         }
@@ -369,12 +381,12 @@
 
     ;(project.bots || []).forEach(function (bot) {
       var doing = el('div', 'doing')
-      doing.appendChild(el('span', 'dot ' + (bot.task && bot.task.subject ? 'live' : 'idle')))
+      doing.appendChild(el('span', 'dot ' + (isBusy(bot) ? 'live' : 'idle')))
       var what = el('div', 'what')
       what.appendChild(el('strong', null, botLabel(bot.worker)))
-      if (bot.task && bot.task.subject) {
+      if (doingText(bot)) {
         what.appendChild(document.createTextNode(' is on '))
-        what.appendChild(el('span', null, bot.task.activeForm || bot.task.subject))
+        what.appendChild(el('span', null, doingText(bot)))
       } else {
         what.appendChild(document.createTextNode(' is here, waiting for you'))
       }
@@ -430,12 +442,12 @@
 
     bots.forEach(function (bot) {
       var strip = el('div', 'doing')
-      strip.appendChild(el('span', 'dot ' + (bot.task && bot.task.subject ? 'live' : 'idle')))
+      strip.appendChild(el('span', 'dot ' + (isBusy(bot) ? 'live' : 'idle')))
       var what = el('div', 'what')
       what.appendChild(el('strong', null, botLabel(bot.worker)))
-      if (bot.task && bot.task.subject) {
+      if (doingText(bot)) {
         what.appendChild(document.createTextNode(' is working on '))
-        what.appendChild(el('span', null, bot.task.activeForm || bot.task.subject))
+        what.appendChild(el('span', null, doingText(bot)))
       } else {
         what.appendChild(document.createTextNode(' is on this app, waiting for you'))
       }

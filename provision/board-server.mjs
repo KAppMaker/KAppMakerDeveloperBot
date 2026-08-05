@@ -63,7 +63,10 @@ const DEFAULT_PROGRESS_FILE = 'PROGRESS_FEATURES.md'
 const GIT_CACHE_MS = 10_000
 const GIT_TIMEOUT_MS = 4_000
 const GIT_MAX_CONCURRENT = 2
-const MAX_SSE_CLIENTS = 2
+// One phone plus a laptop plus a reconnect blip must not lock anyone out — the
+// old cap of 2 did exactly that on a real box ("too many live viewers").
+const MAX_SSE_CLIENTS = 8
+const BUSY_WINDOW_MS = 2 * 60 * 1000              // "working" = wrote something recently
 const SSE_MAX_MS = 30 * 60 * 1000                 // drop the stream after 30 min
 const TAIL_WINDOW = 32 * 1024                     // transcripts run to tens of MB
 // Inference reads further back than the live tail: "which project is this bot
@@ -501,12 +504,22 @@ function liveWorkers () {
     if (!worker) continue
     if (info.pid && !processAlive(Number(info.pid))) continue
 
+    const transcript = transcriptFor(info.sessionId, info.cwd || null)
+    const activeAt = lastActivityAt(transcript)
+
     out.push({
       worker,
       sessionId: info.sessionId,
       cwd: info.cwd || null,
+      transcript,
       startedAt: typeof info.startedAt === 'number' ? info.startedAt : null,
       task: currentTask(info.sessionId),
+      lastActiveAt: activeAt ? new Date(activeAt).toISOString() : null,
+      // Claude Code only writes task files when it uses the task tool, so a
+      // bot can be hard at work with an empty task list. Recent writes to its
+      // transcript are the honest signal — otherwise the board says "idle"
+      // while the customer is watching it build (which is what happened).
+      busy: activeAt !== null && Date.now() - activeAt < BUSY_WINDOW_MS,
     })
   }
   return out.sort((a, b) => a.worker.localeCompare(b.worker))
@@ -546,13 +559,13 @@ function currentTask (sessionId) {
  */
 const inferCache = new Map()
 
-function inferProject (sessionId) {
-  const cached = inferCache.get(sessionId)
+function inferProject (file) {
+  if (!file) return null
+  const cached = inferCache.get(file)
   if (cached && Date.now() - cached.at < GIT_CACHE_MS) return cached.slug
 
   let slug = null
-  const file = transcriptFor(sessionId)
-  if (file) {
+  {
     try {
       const stat = fs.statSync(file)
       const length = Math.min(stat.size, INFER_WINDOW)
@@ -572,7 +585,7 @@ function inferProject (sessionId) {
       }
     } catch { /* inference is best-effort by definition */ }
   }
-  inferCache.set(sessionId, { at: Date.now(), slug })
+  inferCache.set(file, { at: Date.now(), slug })
   return slug
 }
 
@@ -608,7 +621,7 @@ function workerProjects (workers, claimed) {
   for (const worker of workers) {
     const claim = [...claimed.entries()].find(([, entry]) => entry.owner === worker.worker)
     byWorker.set(worker.worker, {
-      slug: claim ? claim[0] : inferProject(worker.sessionId),
+      slug: claim ? claim[0] : inferProject(worker.transcript),
       source: claim ? 'claim' : 'activity',
     })
   }
@@ -647,6 +660,8 @@ async function buildState () {
         worker: worker.worker,
         handle: handles.get(worker.worker) || null,
         task: worker.task,
+        busy: worker.busy,
+        lastActiveAt: worker.lastActiveAt,
         via: placement.get(worker.worker)?.source || null,
       })),
     })
@@ -659,6 +674,8 @@ async function buildState () {
       worker: worker.worker,
       handle: handles.get(worker.worker) || null,
       task: worker.task,
+      busy: worker.busy,
+      lastActiveAt: worker.lastActiveAt,
       project: placement.get(worker.worker)?.slug || null,
       via: placement.get(worker.worker)?.source || null,
     })),
@@ -755,15 +772,45 @@ function matchItem (items, subject) {
  * We scan rather than re-implement Claude Code's directory encoding, so a
  * change in that encoding cannot silently break the feed.
  */
-function transcriptFor (sessionId) {
-  if (!/^[A-Za-z0-9-]{8,64}$/.test(sessionId)) return null
+function transcriptFor (sessionId, cwd = null) {
   const root = path.join(CLAUDE_DIR, 'projects')
-  for (const entry of listDirSafe(root)) {
-    if (!entry.isDirectory()) continue
-    const candidate = path.join(root, entry.name, `${sessionId}.jsonl`)
-    if (fs.existsSync(candidate)) return candidate
+
+  if (/^[A-Za-z0-9-]{8,64}$/.test(sessionId)) {
+    for (const entry of listDirSafe(root)) {
+      if (!entry.isDirectory()) continue
+      const candidate = path.join(root, entry.name, `${sessionId}.jsonl`)
+      if (fs.existsSync(candidate)) return candidate
+    }
   }
-  return null
+
+  // The session registry can name a session that has no transcript — seen on a
+  // real box, where the registered id had no file while the worker's actual
+  // conversations sat under two other ids in the same folder. Without this
+  // fallback that worker looks permanently silent. So: newest transcript in the
+  // folder for this worker's own working directory.
+  if (!cwd) return null
+  const dir = path.join(root, path.resolve(cwd).replace(/\//g, '-'))
+  let newest = null
+  let newestAt = 0
+  for (const entry of listDirSafe(dir)) {
+    if (!entry.isFile() || !entry.name.endsWith('.jsonl')) continue
+    const file = path.join(dir, entry.name)
+    try {
+      const at = fs.statSync(file).mtimeMs
+      if (at > newestAt) { newestAt = at; newest = file }
+    } catch { /* raced with a rotation */ }
+  }
+  return newest
+}
+
+/** When did this worker last actually do anything? */
+function lastActivityAt (file) {
+  if (!file) return null
+  try {
+    return fs.statSync(file).mtimeMs
+  } catch {
+    return null
+  }
 }
 
 const TOOL_PHRASES = {
@@ -835,15 +882,20 @@ function eventsFromLine (line, worker) {
   return events
 }
 
-let sseClients = 0
+// A Set, not a counter: a counter that misses a single cleanup leaks a slot
+// forever and eventually locks the owner out of their own board.
+const sseClients = new Set()
 
 function startStream (req, res) {
-  if (sseClients >= MAX_SSE_CLIENTS) {
+  for (const client of sseClients) {
+    if (client.writableEnded || client.destroyed) sseClients.delete(client)
+  }
+  if (sseClients.size >= MAX_SSE_CLIENTS) {
     res.writeHead(503, { 'Content-Type': 'text/plain' })
     res.end('too many live viewers')
     return
   }
-  sseClients += 1
+  sseClients.add(res)
 
   res.writeHead(200, {
     ...securityHeaders(),
@@ -858,7 +910,7 @@ function startStream (req, res) {
   const attach = () => {
     for (const worker of liveWorkers()) {
       if (tails.has(worker.worker)) continue
-      const file = transcriptFor(worker.sessionId)
+      const file = worker.transcript
       if (!file) continue
       let size = 0
       try {
@@ -926,7 +978,7 @@ function startStream (req, res) {
     clearInterval(poll)
     clearInterval(beat)
     clearTimeout(stop)
-    sseClients = Math.max(0, sseClients - 1)
+    sseClients.delete(res)
   }
   req.on('close', cleanup)
   res.on('close', cleanup)
