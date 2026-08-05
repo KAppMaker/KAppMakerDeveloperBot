@@ -66,6 +66,10 @@ const GIT_MAX_CONCURRENT = 2
 const MAX_SSE_CLIENTS = 2
 const SSE_MAX_MS = 30 * 60 * 1000                 // drop the stream after 30 min
 const TAIL_WINDOW = 32 * 1024                     // transcripts run to tens of MB
+// Inference reads further back than the live tail: "which project is this bot
+// on" can be several turns old, while the feed only ever wants what just
+// happened. Still bounded, still cached.
+const INFER_WINDOW = 512 * 1024
 const STREAM_POLL_MS = 1_000
 
 // ---------------------------------------------------------------- utilities
@@ -533,7 +537,7 @@ function inferProject (sessionId) {
   if (file) {
     try {
       const stat = fs.statSync(file)
-      const length = Math.min(stat.size, TAIL_WINDOW)
+      const length = Math.min(stat.size, INFER_WINDOW)
       const buffer = Buffer.alloc(length)
       const fd = fs.openSync(file, 'r')
       try {
