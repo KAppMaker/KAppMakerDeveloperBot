@@ -38,6 +38,41 @@ have_telegram_token() {
   [[ -f "$TELEGRAM_ENV" ]] && grep -qs "TELEGRAM_BOT_TOKEN=..*" "$TELEGRAM_ENV"
 }
 
+# Resolve this bot's PUBLIC @handle and publish it to ~/.config/kappmaker/bots/,
+# then echo it. Two consumers: the setup_complete callback below, and the
+# project board — which reads only this file, because the board's sandbox
+# deliberately cannot see the channel dir where the TOKEN lives.
+# The token is read in pure bash so it never appears in any subprocess argv.
+publish_bot_handle() {
+  local handle_file="$HOME/.config/kappmaker/bots/app1"
+  if [[ -s "$handle_file" ]]; then
+    cat "$handle_file"
+    return 0
+  fi
+  [[ -f "$TELEGRAM_ENV" ]] || return 0
+
+  local tg_token="" line handle=""
+  while IFS= read -r line; do
+    case "$line" in
+      TELEGRAM_BOT_TOKEN=*)
+        tg_token="${line#TELEGRAM_BOT_TOKEN=}"
+        tg_token="${tg_token%\"}"; tg_token="${tg_token#\"}"
+        break;;
+    esac
+  done < "$TELEGRAM_ENV"
+  [[ -n "$tg_token" ]] || return 0
+
+  handle="$(curl -fsS --max-time 10 "https://api.telegram.org/bot${tg_token}/getMe" 2>/dev/null \
+    | sed -n 's/.*"username":"\([A-Za-z0-9_]*\)".*/\1/p')"
+  unset tg_token
+  [[ -n "$handle" ]] || return 0
+
+  mkdir -p "$(dirname "$handle_file")"
+  printf '%s\n' "$handle" > "$handle_file"
+  chmod 644 "$handle_file"
+  printf '%s\n' "$handle"
+}
+
 # Setup is only truly complete once the customer's Telegram account is PAIRED —
 # i.e. their numeric user ID is in access.json's allowFrom. Until then the bot
 # is online (so pairing codes can be minted) but no one can reach the assistant,
@@ -106,22 +141,7 @@ if have_paired; then
   # only the lifecycle state + the PUBLIC bot username (for the "Open your bot"
   # button). The bot token itself never leaves this box.
   if [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$SETUP_SENT_MARKER" ]]; then
-    BOT_USERNAME=""
-    # Pure-bash read: the token never appears in any subprocess argv (ps-safe).
-    TG_TOKEN=""
-    while IFS= read -r line; do
-      case "$line" in
-        TELEGRAM_BOT_TOKEN=*)
-          TG_TOKEN="${line#TELEGRAM_BOT_TOKEN=}"
-          TG_TOKEN="${TG_TOKEN%\"}"; TG_TOKEN="${TG_TOKEN#\"}"
-          break;;
-      esac
-    done < "$TELEGRAM_ENV"
-    if [[ -n "$TG_TOKEN" ]]; then
-      BOT_USERNAME="$(curl -fsS "https://api.telegram.org/bot${TG_TOKEN}/getMe" 2>/dev/null \
-        | sed -n 's/.*"username":"\([A-Za-z0-9_]*\)".*/\1/p')"
-    fi
-    unset TG_TOKEN
+    BOT_USERNAME="$(publish_bot_handle)"
 
     if curl -fsS -X POST "$SERVER_CALLBACK_URL" \
         --data-urlencode "state=setup_complete" \
@@ -156,6 +176,10 @@ fi
 # theme + folder-trust flags — otherwise those prompts would block a headless
 # start). Until the customer is paired the bot only hands out pairing codes.
 TMUX_SESSION="claude"
+# Make sure the board can label this bot even on a box with no control plane
+# (a dev box), where the callback branch above never runs. No-op once cached.
+publish_bot_handle >/dev/null 2>&1 || true
+
 tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
 tmux new-session -d -s "$TMUX_SESSION" \
   claude --channels "$TELEGRAM_CHANNEL" --dangerously-skip-permissions

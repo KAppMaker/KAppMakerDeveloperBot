@@ -1,0 +1,13 @@
+# Hourly idle check for the project board. Enabled with the board itself, so a
+# board left on after a look-around does not stay exposed for weeks.
+
+[Unit]
+Description=Hourly idle check for the KAppMaker project board
+
+[Timer]
+OnBootSec=1h
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,48 @@
+# KAppMaker AI — outbound tunnel that makes the project board reachable.
+#
+# This is why the box never opens a port: cloudflared dials OUT to Cloudflare
+# and Cloudflare terminates TLS, so `ufw` stays exactly as provisioning left it
+# (SSH only) and a port scan of the box still finds nothing but 22. Same quick
+# tunnel mechanism ~/bin/preview already uses for web build previews.
+#
+# BindsTo the board itself: if the board stops, the tunnel must not linger
+# pointing at a dead port.
+#
+# The URL is written to the state dir so `kappmaker-board link` can read it
+# without needing root or journal access.
+
+[Unit]
+Description=KAppMaker AI project board tunnel (outbound only)
+After=network-online.target kappmaker-board.service
+Wants=network-online.target
+BindsTo=kappmaker-board.service
+
+[Service]
+Type=simple
+User=__DEVUSER__
+Environment=HOME=/home/__DEVUSER__
+ExecStartPre=/bin/rm -f /home/__DEVUSER__/.local/state/kappmaker-board/tunnel.log
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate \
+  --logfile /home/__DEVUSER__/.local/state/kappmaker-board/tunnel.log \
+  --url http://127.0.0.1:7788
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=0
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindPaths=/home/__DEVUSER__/.local/state/kappmaker-board
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+MemoryMax=128M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

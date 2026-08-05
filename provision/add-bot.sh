@@ -101,6 +101,12 @@ while :; do
 
   if [[ -n "$BOT_USERNAME" ]]; then
     ok "Connected to @$BOT_USERNAME"
+    # Publish the PUBLIC handle where the project board can read it. The board
+    # cannot see this helper's channel dir (that is where the token lives), so
+    # without this file it would show the bot with no way to open its chat.
+    install -d -m 755 "$HOME/.config/kappmaker/bots"
+    printf '%s\n' "$BOT_USERNAME" > "$HOME/.config/kappmaker/bots/$INSTANCE"
+    chmod 644 "$HOME/.config/kappmaker/bots/$INSTANCE"
     break
   fi
 

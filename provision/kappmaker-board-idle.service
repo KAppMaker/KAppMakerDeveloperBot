@@ -1,0 +1,13 @@
+# KAppMaker AI — take the board back off the internet when nobody is looking.
+# Paired with kappmaker-board-idle.timer. Runs as the owner because that is who
+# may stop the units (passwordless sudo); the board service itself cannot.
+
+[Unit]
+Description=KAppMaker AI project board idle check
+ConditionPathExists=/usr/local/bin/kappmaker-board
+
+[Service]
+Type=oneshot
+User=__DEVUSER__
+Environment=HOME=/home/__DEVUSER__
+ExecStart=/usr/local/bin/kappmaker-board idle-check

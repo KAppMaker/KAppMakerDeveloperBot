@@ -137,7 +137,13 @@ fi
 # The token itself never leaves the box: read in pure bash (ps-safe) and only
 # the resulting @handle is sent.
 report_bot_username() {
-  [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$BOT_SENT_MARKER" ]] || return 0
+  # The handle file is also read by the project board (which cannot see this
+  # worker's channel dir, where the token lives), so resolve the @handle even
+  # when there is nothing to report to — e.g. a box with no control plane.
+  local handle_file="$HOME/.config/kappmaker/bots/$INSTANCE"
+  if [[ -s "$handle_file" && -f "$BOT_SENT_MARKER" ]]; then
+    return 0
+  fi
 
   local tg_token="" line bot_username=""
   while IFS= read -r line; do
@@ -156,6 +162,12 @@ report_bot_username() {
   unset tg_token
 
   [[ -n "$bot_username" ]] || return 0
+
+  mkdir -p "$(dirname "$handle_file")"
+  printf '%s\n' "$bot_username" > "$handle_file"
+  chmod 644 "$handle_file"
+
+  [[ -n "${SERVER_CALLBACK_URL:-}" && ! -f "$BOT_SENT_MARKER" ]] || return 0
 
   if curl -fsS -X POST "$SERVER_CALLBACK_URL" \
       --data-urlencode "state=progress" \

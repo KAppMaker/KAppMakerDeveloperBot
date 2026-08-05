@@ -1,0 +1,75 @@
+# KAppMaker AI — read-only project board (loopback only).
+#
+# Installed by bootstrap.sh, left DISABLED. It is started only when the owner
+# asks for their board (`kappmaker-board on`, usually via `link`), so a customer
+# who never opens the board runs nothing extra.
+#
+# The server binds 127.0.0.1 and NO inbound port is ever opened on the box;
+# reachability comes from kappmaker-board-tunnel.service dialling out.
+#
+# SANDBOX: this is the one long-lived process that serves data to a browser, and
+# it runs as the same user that has passwordless sudo. So it is boxed in hard:
+#   - NoNewPrivileges kills the sudo path from inside this process entirely.
+#   - The whole home directory is replaced by a read-only tmpfs, and only the
+#     paths the board actually reads are bound back in read-only. In particular
+#     ~/.claude/.credentials.json and ~/.claude/channels/ (Telegram bot tokens)
+#     are NOT bound — they do not exist as far as this process is concerned.
+#   - The only writable location is its own state dir (sessions + login tokens).
+# Even a full compromise of the board yields read access to project files and
+# transcripts: no credentials, no ability to open a port or touch a unit.
+#
+# No EnvironmentFile on purpose: ~/.config/kappmaker/env holds the signed
+# callback URL, and the board has no business seeing it.
+
+[Unit]
+Description=KAppMaker AI project board (read-only, loopback)
+After=network-online.target
+
+[Service]
+Type=simple
+User=__DEVUSER__
+Environment=HOME=/home/__DEVUSER__
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/home/__DEVUSER__
+ExecStart=/usr/bin/node /home/__DEVUSER__/bin/board-server.mjs
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=0
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+MemoryMax=192M
+TasksMax=64
+
+# Hide the home directory, then bind back only what the board reads.
+# The `-` prefix keeps a missing path from failing the unit (a box with no
+# extra workers has no ~/.claude/tasks yet).
+TemporaryFileSystem=/home/__DEVUSER__:ro
+BindReadOnlyPaths=-/home/__DEVUSER__/bin
+BindReadOnlyPaths=-/home/__DEVUSER__/projects
+BindReadOnlyPaths=-/home/__DEVUSER__/.claude/projects
+BindReadOnlyPaths=-/home/__DEVUSER__/.claude/tasks
+BindReadOnlyPaths=-/home/__DEVUSER__/.claude/sessions
+BindReadOnlyPaths=-/home/__DEVUSER__/.claude/session-history.md
+BindReadOnlyPaths=-/home/__DEVUSER__/.config/kappmaker/bots
+BindPaths=/home/__DEVUSER__/.local/state/kappmaker-board
+
+[Install]
+WantedBy=multi-user.target

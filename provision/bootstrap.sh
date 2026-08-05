@@ -206,6 +206,20 @@ curl -fsSL "$PROVISION_BASE_URL/claim.sh" -o /usr/local/bin/kappmaker-claim \
   && chmod 755 /usr/local/bin/kappmaker-claim \
   || warn "claim helper not installed (parallel workers could collide)"
 
+# Read-only project board: a window onto ~/projects (checklists, git activity,
+# what each worker is doing right now). INSTALLED BUT OFF — it starts nothing
+# and opens no port until the owner asks their bot for it. Guarded: a box's
+# core promise does not depend on the board, so a transient fetch failure must
+# never abort provisioning (we run under `set -e`).
+if curl -fsSL "$PROVISION_BASE_URL/board-install.sh" -o /usr/local/bin/kappmaker-board-install; then
+  chmod 755 /usr/local/bin/kappmaker-board-install
+  DEVUSER="$DEVUSER" PROVISION_BASE_URL="$PROVISION_BASE_URL" \
+    /usr/local/bin/kappmaker-board-install >/dev/null 2>&1 \
+    || warn "project board not installed (the box works fine without it)"
+else
+  warn "board installer not fetched (project board unavailable)"
+fi
+
 # Optional owner-run extra hardening: lock SSH to their private Tailscale
 # network (guided, fail-safe — refuses to touch UFW until the owner has proven
 # a working tailnet SSH login). Surfaced in the dashboard's Advanced section.
