@@ -34,13 +34,13 @@
     font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
-  .wrap { max-width:72rem; margin:0 auto; padding:24px 16px 64px; }
+  .wrap { max-width:72rem; margin:0 auto; padding:20px 16px 56px; }
   a { color:var(--primary-400); text-decoration:none; }
   a:hover { color:var(--primary-300); }
   button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
 
-  header.top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
-  h1 { font-size:1.5rem; margin:0; font-weight:700; letter-spacing:-.01em; }
+  header.top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+  h1 { font-size:1.3rem; margin:0; font-weight:700; letter-spacing:-.01em; }
   .grow { flex:1 1 auto; }
   .chip {
     display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border-radius:99px;
@@ -55,36 +55,62 @@
   .dot.idle { background:var(--dim); }
   @keyframes ping { 75%,100% { transform:scale(2.4); opacity:0; } }
   .ghost { color:var(--muted); font-size:.85rem; padding:6px 10px; border-radius:99px; border:1px solid var(--line); }
+  /* On a phone, let the title own its line so the status chip and Sign out sit
+     together underneath instead of Sign out stranding on a third line. */
+  @media (max-width:560px) {
+    h1 { flex:1 1 100%; }
+    header.top { gap:10px; }
+    .chip { font-size:.75rem; }
+  }
   .ghost:hover { color:var(--text); border-color:rgba(255,255,255,.2); }
 
-  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(19rem,1fr)); }
+  /* align-items:start — otherwise every card stretches to the tallest in its
+     row and the sparse ones (no bot, no checklist) show a big empty void. */
+  .grid {
+    display:grid; gap:14px; align-items:start;
+    grid-template-columns:repeat(auto-fill,minmax(17.5rem,1fr));
+  }
   .card {
-    border:1px solid var(--line); background:rgba(15,21,19,.6); border-radius:20px; padding:20px;
-    display:flex; flex-direction:column; gap:14px; text-align:left; width:100%;
+    border:1px solid var(--line); background:rgba(15,21,19,.6); border-radius:18px; padding:18px;
+    display:flex; flex-direction:column; gap:12px; text-align:left; width:100%;
     transition:border-color .15s ease, transform .15s ease;
   }
   button.card:hover { border-color:rgba(16,185,129,.4); transform:translateY(-2px); }
-  .card h2 { margin:0; font-size:1.05rem; font-weight:650; overflow-wrap:anywhere; }
+  .card h2 { margin:0; font-size:1.02rem; font-weight:650; overflow-wrap:anywhere; line-height:1.3; }
   .row { display:flex; align-items:center; gap:12px; }
+  /* Footer line of a card: never let a badge wrap mid-word. */
+  .meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:auto; }
   .muted { color:var(--muted); font-size:.85rem; }
   .dim { color:var(--dim); font-size:.8rem; }
   .badge {
     font-size:.72rem; font-weight:600; padding:3px 9px; border-radius:99px;
-    border:1px solid var(--line); color:var(--muted);
+    border:1px solid var(--line); color:var(--muted); white-space:nowrap;
   }
-  .badge.warn { border-color:rgba(251,191,36,.25); background:rgba(251,191,36,.1); color:var(--amber); }
+  .badge.warn { border-color:rgba(251,191,36,.22); background:rgba(251,191,36,.07); color:#d9a441; }
 
   .ring { flex:none; }
   .ring circle { fill:none; stroke-width:6; }
   .ring .track { stroke:rgba(255,255,255,.08); }
   .ring .val { stroke:var(--primary); stroke-linecap:round; transition:stroke-dasharray .4s ease; }
   .ring text { fill:var(--text); font-size:15px; font-weight:700; text-anchor:middle; }
+  /* Nothing to measure yet: a full-size empty dial reads as "0% done", which is
+     not what "we have no checklist" means. Show a quiet placeholder instead. */
+  .ring.blank circle { stroke-width:2; stroke:rgba(255,255,255,.10); }
+  .ring.blank text { fill:var(--dim); font-size:13px; font-weight:600; }
 
   .doing {
     border:1px solid rgba(16,185,129,.25); background:rgba(16,185,129,.07);
     border-radius:14px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start;
   }
-  #view > .doing, #view > .summary { margin-bottom:16px; }
+  #view > .doing, #view > .summary, #view > .builders { margin-bottom:16px; }
+  .builders { gap:0; }
+  .builder {
+    display:flex; gap:10px; align-items:flex-start; padding:10px 0;
+    border-top:1px solid var(--line-soft); font-size:.92rem;
+  }
+  .builder:first-of-type { border-top:0; padding-top:4px; }
+  .builder:last-child { padding-bottom:0; }
+  .builder .dot { margin-top:7px; }
   .summary { display:flex; align-items:center; gap:14px; }
   .doing .what { font-size:.9rem; }
 
@@ -232,11 +258,13 @@
   // ------------------------------------------------------------ progress ring
 
   function ring (done, total) {
-    var pct = total > 0 ? Math.round((done / total) * 100) : 0
+    var blank = !(total > 0)
+    var pct = blank ? 0 : Math.round((done / total) * 100)
     var r = 26, c = 2 * Math.PI * r
+    var size = blank ? 44 : 64
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('class', 'ring')
-    svg.setAttribute('width', '64'); svg.setAttribute('height', '64')
+    svg.setAttribute('class', 'ring' + (blank ? ' blank' : ''))
+    svg.setAttribute('width', String(size)); svg.setAttribute('height', String(size))
     svg.setAttribute('viewBox', '0 0 64 64')
     svg.setAttribute('aria-hidden', 'true')
 
@@ -257,7 +285,7 @@
 
     var label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
     label.setAttribute('x', '32'); label.setAttribute('y', '37')
-    label.textContent = total > 0 ? pct + '%' : '–'
+    label.textContent = blank ? '–' : pct + '%'
     svg.appendChild(label)
     return svg
   }
@@ -282,27 +310,26 @@
     // With several helpers the first question is "who is on what right now" —
     // answer it before the project grid, not inside it.
     if (workers.length > 1) {
-      var strip = el('div', 'card')
-      strip.style.marginBottom = '16px'
+      var strip = el('div', 'card builders')
       strip.appendChild(el('h2', null, 'Your builders'))
       workers.forEach(function (worker) {
-        var row = el('div', 'row')
-        row.appendChild(el('span', 'dot ' + (worker.task && worker.task.subject ? 'live' : 'idle')))
-        var line = el('div', 'what')
+        var busy = !!(worker.task && worker.task.subject)
+        var row = el('div', 'builder')
+        row.appendChild(el('span', 'dot ' + (busy ? 'live' : 'idle')))
+
+        var line = el('div')
         line.appendChild(el('strong', null, botLabel(worker.worker)))
         if (worker.project) {
-          line.appendChild(document.createTextNode(' on '))
+          line.appendChild(document.createTextNode(' — '))
           var jump = el('a', null, worker.project)
           jump.href = '#/p/' + encodeURIComponent(worker.project)
           line.appendChild(jump)
-          if (worker.via === 'activity') line.appendChild(el('span', 'dim', '  (from its recent work)'))
-        } else {
-          line.appendChild(document.createTextNode(' — not on a project yet'))
         }
-        if (worker.task && worker.task.subject) {
+        // One line when idle: "Bot 1 — waiting for you" said twice was noise.
+        if (busy) {
           line.appendChild(el('div', 'muted', worker.task.activeForm || worker.task.subject))
         } else {
-          line.appendChild(el('div', 'dim', 'Idle — waiting for you'))
+          line.appendChild(document.createTextNode(worker.project ? ' · waiting for you' : ' — waiting for you'))
         }
         row.appendChild(line)
         strip.appendChild(row)
@@ -355,20 +382,19 @@
       card.appendChild(doing)
     })
 
-    var meta = el('div', 'row')
+    var meta = el('div', 'meta')
     if (project.git && project.git.lastCommit) {
       meta.appendChild(el('span', 'dim', 'Last change ' + ago(project.git.lastCommit.at)))
     } else if (project.git && project.git.isRepo) {
-      meta.appendChild(el('span', 'dim', 'No commits yet'))
+      meta.appendChild(el('span', 'dim', 'No changes saved yet'))
     } else {
-      meta.appendChild(el('span', 'dim', 'Not a git repo'))
+      // "Not a git repo" is jargon to the person this board is for.
+      meta.appendChild(el('span', 'dim', 'No history yet'))
     }
     if (project.git && project.git.dirty > 0) {
       meta.appendChild(el('span', 'badge warn', project.git.dirty + ' unsaved'))
     }
-    if (!project.hasChecklist) {
-      meta.appendChild(el('span', 'badge', 'no checklist'))
-    }
+    // No "no checklist" badge here — the line under the title already says it.
     card.appendChild(meta)
     return card
   }
