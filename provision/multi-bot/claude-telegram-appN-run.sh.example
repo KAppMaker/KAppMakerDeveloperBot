@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Always-on Claude + Telegram runner for the SECOND bot (session claude-app2).
+# Managed by systemd: claude-telegram-app2.service. Mirrors claude-telegram-run.sh
+# but with its own Telegram state dir (own bot token + pairing) and its own
+# boot directory — a distinct start dir is REQUIRED: two sessions started from
+# the same directory share one channel server and the second bot never polls.
+set -uo pipefail
+
+SESSION="claude-app2"
+BOOT_DIR="$HOME/workspaces/app2"
+STATE_DIR="$HOME/.claude/channels/telegram-app2"
+TELEGRAM_CHANNEL="plugin:telegram@claude-plugins-official"
+
+have_claude_login() {
+  claude auth status 2>/dev/null | grep -q '"loggedIn" *: *true'
+}
+
+have_telegram_token() {
+  [[ -f "$STATE_DIR/.env" ]] && grep -qs "TELEGRAM_BOT_TOKEN=..*" "$STATE_DIR/.env"
+}
+
+if ! have_claude_login || ! have_telegram_token; then
+  echo "[claude-app2] Claude login and/or bot-2 token missing — waiting."
+  exit 1
+fi
+
+mkdir -p "$BOOT_DIR"
+
+# Refuse to double-start (e.g. unit restarted while the session is healthy).
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  echo "[claude-app2] Session already running — supervising it."
+else
+  # Env vars go INSIDE the command string: tmux commands inherit the tmux
+  # SERVER environment, not this shell. bun must be on PATH — the channel
+  # server runs on it, and a failed spawn gets cached in
+  # mcp-needs-auth-cache.json and never retried.
+  tmux new-session -d -s "$SESSION" -c "$BOOT_DIR" \
+    "PATH=$HOME/.bun/bin:\$PATH TELEGRAM_STATE_DIR=$STATE_DIR claude --channels $TELEGRAM_CHANNEL --dangerously-skip-permissions"
+fi
+
+# Supervise: stay alive while the session lives; exit → systemd restarts us.
+while tmux has-session -t "$SESSION" 2>/dev/null; do sleep 5; done
+echo "[claude-app2] Session ended — systemd will restart."
+exit 1

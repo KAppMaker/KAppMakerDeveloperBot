@@ -1,0 +1,22 @@
+# Second always-on Claude Code + Telegram session (bot 2 / claude-app2).
+# Mirrors claude-telegram.service; own bot token + Telegram state dir.
+
+[Unit]
+Description=KAppMaker AI — always-on Claude Code + Telegram (bot 2)
+After=network-online.target claude-telegram.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=devuser
+WorkingDirectory=/home/devuser/workspaces/app2
+ExecStart=/home/devuser/bin/claude-telegram-app2-run.sh
+Restart=always
+RestartSec=15
+StartLimitIntervalSec=0
+OOMScoreAdjust=-500
+Environment=HOME=/home/devuser
+EnvironmentFile=-/home/devuser/.config/kappmaker/env
+
+[Install]
+WantedBy=multi-user.target
