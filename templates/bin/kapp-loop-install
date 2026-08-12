@@ -36,13 +36,9 @@ echo "  app:      $APP_DIR"
 
 # --- static guidance -> AiGuidelines/loop/ (matches the boilerplate's convention) ---
 mkdir -p "$APP_DIR/AiGuidelines/loop"
-cp "$TEMPLATE/AiGuidelines/loop/SELF_IMPROVE_LOOP.md" "$APP_DIR/AiGuidelines/loop/SELF_IMPROVE_LOOP.md"
-cp "$TEMPLATE/AiGuidelines/loop/PLAN.template.md" "$APP_DIR/AiGuidelines/loop/PLAN.template.md"
-cp "$TEMPLATE/AiGuidelines/loop/CONVERSION_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/CONVERSION_PLAYBOOK.md"
-cp "$TEMPLATE/AiGuidelines/loop/GROWTH_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/GROWTH_PLAYBOOK.md"
-cp "$TEMPLATE/AiGuidelines/loop/DESIGN_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/DESIGN_PLAYBOOK.md"
-cp "$TEMPLATE/AiGuidelines/loop/COPY_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/COPY_PLAYBOOK.md"
-cp "$TEMPLATE/AiGuidelines/loop/QA_PLAYBOOK.md" "$APP_DIR/AiGuidelines/loop/QA_PLAYBOOK.md"
+# Copy every loop doc by glob — naming them one by one meant a new file
+# (IMPROVEMENT_PASS.md) was referenced by CLAUDE.md but never installed.
+cp "$TEMPLATE"/AiGuidelines/loop/*.md "$APP_DIR/AiGuidelines/loop/"
 
 # --- runtime working data -> .loop/ (generated logs/output, kept out of AiGuidelines) ---
 mkdir -p "$APP_DIR/.loop/reviews" "$APP_DIR/.loop/reports"

@@ -167,3 +167,9 @@ The iteration cap and a red build also end the loop automatically (the guard han
   cancellation. **Refuse** fake scarcity/countdowns, deceptive or buried cancel flows, pre-checked
   upsells, misleading "free" labels, or confusing price anchoring — even if it would lift the
   metric. If a requested change crosses this line, stop and flag it instead of implementing it.
+
+## Full improvement pass
+
+For a whole-funnel run, `IMPROVEMENT_PASS.md` (next to this file) is the brief: the milestone order,
+what each specialist audits, what "done" means, and the reporting rule (message at milestone
+boundaries, never per change). The orchestrator reads it before seeding the plan.

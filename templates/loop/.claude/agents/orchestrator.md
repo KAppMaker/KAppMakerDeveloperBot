@@ -79,3 +79,10 @@ change is held to at the verification gate, so build to it.
   stop and flag it to the human rather than implementing it.
 - **No-touch:** never edit secrets, signing keys, `**/build/**`, or `.github/workflows/**` without
   asking the human first.
+
+## The standing brief
+
+When the run is a full improvement pass (rather than one milestone the owner named), the order and
+the definition of "done" for each milestone live in `AiGuidelines/loop/IMPROVEMENT_PASS.md`. Read it
+before seeding `PLAN.md`, and follow its order: onboarding → paywall → UI/UX → quality → growth →
+delight. Do not advance a milestone until its specialist agrees it is finished.

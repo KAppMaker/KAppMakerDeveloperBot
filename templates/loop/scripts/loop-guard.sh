@@ -27,6 +27,22 @@ COUNT_FILE=".claude/.loop-count"
 BASE_FILE=".claude/.loop-base"
 CAP="${KAPP_LOOP_CAP:-25}"
 
+# --- announce-then-stop ---------------------------------------------------
+# Three of the four stop paths used to be silent, which is why a stalled run and
+# a finished run looked identical from the owner's phone. Force one final turn so
+# the agent can say what happened, then stop for real on the next pass.
+ANNOUNCED=".claude/.loop-announced"
+announce_then_stop() {
+  if [ -f "$ANNOUNCED" ]; then
+    rm -f "$ANNOUNCED"
+    exit 0
+  fi
+  : > "$ANNOUNCED"
+  printf '{"decision":"block","reason":"%s"}\n' "$1"
+  exit 0
+}
+
+
 # --- 1. infinite-loop guard: bail if we're already continuing from a stop hook ---
 INPUT="$(cat 2>/dev/null || true)"
 case "$INPUT" in
