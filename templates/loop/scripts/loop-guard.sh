@@ -25,7 +25,16 @@ cd "$DIR" 2>/dev/null || exit 0
 FLAG=".claude/.loop-active"
 COUNT_FILE=".claude/.loop-count"
 BASE_FILE=".claude/.loop-base"
-CAP="${KAPP_LOOP_CAP:-25}"
+# The cap is a runaway backstop, not a work limit. A full improvement pass across six
+# milestones routinely produces well over a hundred plan items, and a cap of 25 used to
+# end the night about a quarter of the way through — the owner woke up to a run that had
+# stopped for no reason they could see. What actually needs catching is a loop that stops
+# making progress, which STALL_CAP below does directly.
+CAP="${KAPP_LOOP_CAP:-200}"
+# Consecutive iterations allowed with no drop in the number of unchecked PLAN.md items.
+STALL_CAP="${KAPP_LOOP_STALL_CAP:-8}"
+REMAIN_FILE=".claude/.loop-remaining"
+STALL_FILE=".claude/.loop-stall"
 
 # --- announce-then-stop ---------------------------------------------------
 # Three of the four stop paths used to be silent, which is why a stalled run and
@@ -38,7 +47,7 @@ ANNOUNCED=".claude/.loop-announced"
 announce_then_stop() {
   if [ -f "$ANNOUNCED" ]; then
     rm -f "$ANNOUNCED"
-    [ "${2:-}" = "keep-flag" ] || rm -f "$FLAG"
+    [ "${2:-}" = "keep-flag" ] || rm -f "$FLAG" "$COUNT_FILE" "$REMAIN_FILE" "$STALL_FILE"
     exit 0
   fi
   : > "$ANNOUNCED"
@@ -137,6 +146,32 @@ if [ "$VERIFY_RESULT" = "fail" ]; then
   echo "loop-guard: verification gate FAILED — stopping the loop (flag left in place for resume)." >&2
   echo "Fix the failing build/tests before continuing. The current PLAN.md item was NOT checked off." >&2
   announce_then_stop "The build or tests went red, so the loop stopped rather than checking off work on a broken build. Send the owner one short message in plain words: what broke, whether you can fix it, and what you need from them if you cannot. Then stop." keep-flag
+fi
+
+# --- 4b. stall detection ---
+# Count what is left. If that number has not gone down for STALL_CAP iterations in a row,
+# the loop is chewing on something it cannot finish — burning the owner's Claude quota all
+# night on no progress. That is the real runaway, and it is invisible to a plain counter.
+REMAINING=0
+if [ -f "PLAN.md" ]; then
+  REMAINING="$(grep -c '^[[:space:]]*-[[:space:]]\[ \]' "PLAN.md" 2>/dev/null || echo 0)"
+fi
+PREV_REMAINING=-1
+[ -f "$REMAIN_FILE" ] && PREV_REMAINING="$(cat "$REMAIN_FILE" 2>/dev/null || echo -1)"
+echo "$REMAINING" > "$REMAIN_FILE"
+
+STALL=0
+[ -f "$STALL_FILE" ] && STALL="$(cat "$STALL_FILE" 2>/dev/null || echo 0)"
+if [ "$PREV_REMAINING" -ge 0 ] && [ "$REMAINING" -ge "$PREV_REMAINING" ]; then
+  STALL=$((STALL + 1))
+else
+  STALL=0
+fi
+echo "$STALL" > "$STALL_FILE"
+
+if [ "$STALL" -ge "$STALL_CAP" ]; then
+  echo "loop-guard: no progress for $STALL iterations — stopping the loop." >&2
+  announce_then_stop "The run has gone $STALL passes without finishing a single plan item, so it is stopping instead of burning the night on something it cannot get past. Send the owner one short message: which item you are stuck on, what you tried, and what you need from them. Then stop."
 fi
 
 # --- 5/6. gate passed: continue if work remains, else finish ---

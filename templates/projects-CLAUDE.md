@@ -301,7 +301,8 @@ only places files; the Stop hook stays inert until the flag file exists.
 - **Start it** — plain language, no slash command: *"improve the onboarding conversion and keep
   going until it's done"*, *"start the self-improve loop on the paywall"*, *"run the dev loop"*.
   This seeds `PLAN.md`, takes a git checkpoint, and raises the loop flag.
-- **Stop it** — *"stop"*, *"pause the loop"*, *"that's enough for now"*. The iteration cap (25) and a
+- **Stop it** — *"stop"*, *"pause the loop"*, *"that's enough for now"*. A run that stops making
+  progress (eight passes without finishing a plan item), a 200-pass backstop, and a
   red build also end it automatically.
 - **Off by default**: the Stop hook is inert unless the flag file `.claude/.loop-active` exists, so
   normal sessions are unaffected. Full workflow lives in the app's

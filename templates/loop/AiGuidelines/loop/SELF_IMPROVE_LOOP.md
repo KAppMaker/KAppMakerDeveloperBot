@@ -150,7 +150,11 @@ the self-improve loop on the paywall", "run the dev loop". On recognizing start 
 1. Run `scripts/stop-loop.sh` — removes the flag.
 2. Confirm in one short line. In-flight work already committed stays; nothing is reverted.
 
-The iteration cap and a red build also end the loop automatically (the guard handles both).
+The guard also ends the loop on its own: a red build, a 200-pass backstop, or eight passes in a row
+without a single plan item getting finished (that last one is what catches a run stuck on something
+it cannot solve, instead of letting it chew through the owner's Claude quota all night). Every one of
+those stops now costs one final turn, where you tell the owner in plain words what happened — a run
+that goes quiet with no explanation is indistinguishable from a crash.
 
 ---
 

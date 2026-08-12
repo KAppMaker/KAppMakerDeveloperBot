@@ -102,5 +102,9 @@ The owner is asleep. That is the entire point of this pass.
 
 ## Stopping
 
-Stop when the owner says stop, when the iteration cap is hit, or when the build goes red and cannot
-be recovered — leave the flag file in place so the run can resume rather than starting over.
+Stop when the owner says stop, when the build goes red and cannot be recovered, or when the guard
+stops you (it ends a run that goes 200 passes, or eight passes without finishing anything).
+
+**Whenever a run ends, say so.** The guard gives you one last turn for exactly this. One short
+message: what you got through, what is still open, and what you need from them if you are stuck.
+The owner is asleep and cannot tell the difference between "finished" and "died" — only you can.
