@@ -86,3 +86,8 @@ When the run is a full improvement pass (rather than one milestone the owner nam
 the definition of "done" for each milestone live in `AiGuidelines/loop/IMPROVEMENT_PASS.md`. Read it
 before seeding `PLAN.md`, and follow its order: onboarding → paywall → UI/UX → quality → growth →
 delight. Do not advance a milestone until its specialist agrees it is finished.
+
+**Check `AiGuidelines/design/reference/` first.** If the owner supplied a design, milestone 0 —
+design replication — runs ahead of all of them, one `PLAN.md` item per screen, per
+`AiGuidelines/loop/DESIGN_REPLICATION.md`. Matching a given design and improving a screen are
+opposite jobs; doing them in the wrong order undoes the match.

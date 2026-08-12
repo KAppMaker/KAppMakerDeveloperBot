@@ -679,6 +679,98 @@ async function buildState () {
   }
 }
 
+// ------------------------------------------------------------------ reports
+//
+// The specialists write real audit reports into .loop/reports and .loop/reviews —
+// the actual work product of a night's run. The board showed none of them, so the
+// owner woke up to a ticked checklist and no way to read WHY anything was changed.
+
+const REPORT_NAME_RE = /^[A-Za-z0-9._-]{1,120}\.md$/
+const REPORT_KINDS = ['reports', 'reviews']
+const REPORT_MAX_BYTES = 256 * 1024
+
+/** Resolve a report path, or null. Kind and name are both whitelisted, and the
+ *  resolved path must still land inside the project's own .loop directory —
+ *  a symlink pointing out of it is rejected like any other traversal. */
+function resolveReport (slug, kind, name) {
+  if (!REPORT_KINDS.includes(kind)) return null
+  if (!REPORT_NAME_RE.test(name)) return null
+  const dir = resolveProject(slug)
+  if (!dir) return null
+  const base = path.join(dir, '.loop', kind)
+  let real, realBase
+  try {
+    realBase = fs.realpathSync(base)
+    real = fs.realpathSync(path.join(base, name))
+  } catch {
+    return null
+  }
+  if (!real.startsWith(realBase + path.sep)) return null
+  try {
+    if (!fs.statSync(real).isFile()) return null
+  } catch {
+    return null
+  }
+  return real
+}
+
+/** First markdown heading, else the filename — something readable in a list. */
+function reportTitle (file) {
+  const raw = readFileSafe(file)
+  if (!raw) return null
+  for (const line of raw.split(/\r?\n/, 40)) {
+    const heading = /^#{1,3}\s+(.+?)\s*$/.exec(line)
+    if (heading) return heading[1].slice(0, 120)
+  }
+  return null
+}
+
+function listReports (slug) {
+  const dir = resolveProject(slug)
+  if (!dir) return []
+  const out = []
+  for (const kind of REPORT_KINDS) {
+    for (const entry of listDirSafe(path.join(dir, '.loop', kind))) {
+      if (!entry.isFile() || !REPORT_NAME_RE.test(entry.name)) continue
+      const file = path.join(dir, '.loop', kind, entry.name)
+      let stat
+      try {
+        stat = fs.statSync(file)
+      } catch {
+        continue
+      }
+      if (stat.size === 0) continue
+      out.push({
+        kind,
+        name: entry.name,
+        title: reportTitle(file) || entry.name.replace(/\.md$/, ''),
+        bytes: stat.size,
+        at: Math.floor(stat.mtimeMs / 1000),
+      })
+    }
+  }
+  // Newest first: the owner wants last night's audit, not the one from July.
+  return out.sort((a, b) => b.at - a.at)
+}
+
+function readReport (slug, kind, name) {
+  const file = resolveReport(slug, kind, name)
+  if (!file) return null
+  const raw = readFileSafe(file)
+  if (raw === null) return null
+  const truncated = raw.length > REPORT_MAX_BYTES
+  return {
+    kind,
+    name,
+    title: reportTitle(file) || name.replace(/\.md$/, ''),
+    truncated,
+    // Same redaction as the live feed. These are the owner's own files behind the
+    // owner's own login, but an audit report quotes freely from source and command
+    // output, which is exactly where a key ends up pasted by accident.
+    text: redact(truncated ? raw.slice(0, REPORT_MAX_BYTES) : raw),
+  }
+}
+
 function buildProject (slug) {
   const dir = resolveProject(slug)
   if (!dir) return null
@@ -707,6 +799,7 @@ function buildProject (slug) {
   return {
     slug,
     name: slug,
+    reports: listReports(slug),
     progressFiles: files,
     file: requested,
     hasChecklist: files.length > 0,
@@ -1230,6 +1323,21 @@ async function handle (req, res) {
     return
   }
 
+  const report = /^\/api\/projects\/([^/]+)\/reports\/([^/]+)\/([^/]+)$/.exec(route)
+  if (report) {
+    const payload = readReport(
+      decodeURIComponent(report[1]),
+      decodeURIComponent(report[2]),
+      decodeURIComponent(report[3]),
+    )
+    if (!payload) {
+      sendJson(res, 404, { error: 'no such report' })
+      return
+    }
+    sendJson(res, 200, payload)
+    return
+  }
+
   notFound(res)
 }
 
@@ -1252,10 +1360,13 @@ export {
   humanText,
   loginTokenValid,
   matchItem,
+  listReports,
   parseChecklist,
   phraseForTool,
+  readReport,
   redact,
   resolveProject,
+  resolveReport,
   server,
   writeState,
 }

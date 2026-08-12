@@ -114,6 +114,29 @@
   .summary { display:flex; align-items:center; gap:14px; }
   .doing .what { font-size:.9rem; }
 
+  /* Audit reports. The specialists write these every run; before this they sat on
+     disk unread, which made a night's work look like nothing but ticked boxes. */
+  .reports { margin-top:22px; border:1px solid var(--line); border-radius:14px; background:var(--card); overflow:hidden; }
+  .reports > summary { cursor:pointer; padding:13px 16px; font-weight:600; list-style:none; display:flex; align-items:center; gap:9px; }
+  .reports > summary::-webkit-details-marker { display:none; }
+  .reports > summary::before { content:'▸'; color:var(--dim); transition:transform .15s; }
+  .reports[open] > summary::before { transform:rotate(90deg); }
+  .rlist { max-height:19rem; overflow-y:auto; border-top:1px solid var(--line); }
+  .ritem { display:flex; align-items:baseline; gap:10px; width:100%; text-align:left; padding:11px 16px;
+           background:none; border:0; border-bottom:1px solid var(--line); color:inherit; font:inherit; cursor:pointer; }
+  .ritem:last-child { border-bottom:0; }
+  .ritem:hover, .ritem:focus-visible { background:rgba(255,255,255,.04); outline:none; }
+  .ritem .rtitle { flex:1; overflow-wrap:anywhere; }
+  .ritem .rwhen { color:var(--dim); font-size:.8rem; white-space:nowrap; }
+  .rkind { font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:var(--dim);
+           border:1px solid var(--line); border-radius:99px; padding:1px 7px; }
+  .rbody { border-top:1px solid var(--line); padding:16px; max-height:32rem; overflow-y:auto; }
+  .rbody h3 { margin:16px 0 7px; font-size:.97rem; }
+  .rbody h3:first-child { margin-top:0; }
+  .rbody p, .rbody li { margin:0 0 8px; line-height:1.55; overflow-wrap:anywhere; }
+  .rbody li { margin-left:18px; }
+  .rbody pre { background:rgba(0,0,0,.28); border:1px solid var(--line); border-radius:9px;
+               padding:11px; overflow-x:auto; font-size:.82rem; }
   /* stretch, not start: a kanban reads as a board when the three columns share
      one height, and each one scrolls inside itself. */
   .cols { display:grid; gap:16px; grid-template-columns:repeat(3,1fr); align-items:stretch; }
@@ -385,6 +408,7 @@
       blank.appendChild(el('p', null, 'No projects yet.'))
       blank.appendChild(el('p', 'dim', 'Message your builder in Telegram with an app idea and it will start one here.'))
       view.appendChild(blank)
+      if (reportsBox) view.appendChild(reportsBox)
       return
     }
 
@@ -444,6 +468,79 @@
 
   // -------------------------------------------------------------- board view
 
+  // A deliberately small markdown renderer: headings, bullets and fenced code, built
+  // as DOM nodes. Never innerHTML — an audit report quotes source code verbatim, so
+  // treating its contents as markup would be handing the page to whatever it quoted.
+  function renderMarkdown (text, into) {
+    var lines = String(text || '').split(/\r?\n/)
+    var code = null
+    var list = null
+    lines.forEach(function (line) {
+      if (/^```/.test(line)) {
+        if (code) { into.appendChild(code); code = null } else { code = el('pre') }
+        return
+      }
+      if (code) { code.appendChild(document.createTextNode(line + '\n')); return }
+      var heading = /^#{1,6}\s+(.*)$/.exec(line)
+      if (heading) { list = null; into.appendChild(el('h3', null, heading[1])); return }
+      var bullet = /^\s*[-*+]\s+(.*)$/.exec(line)
+      if (bullet) {
+        if (!list) { list = el('ul'); into.appendChild(list) }
+        list.appendChild(el('li', null, bullet[1].replace(/[*_`]/g, '')))
+        return
+      }
+      if (!line.trim()) { list = null; return }
+      list = null
+      into.appendChild(el('p', null, line.replace(/[*_`]/g, '')))
+    })
+    if (code) into.appendChild(code)
+  }
+
+  function renderReports (project) {
+    var reports = project.reports || []
+    if (!reports.length) return null
+
+    var box = el('details', 'reports')
+    var head = el('summary')
+    head.appendChild(document.createTextNode('What your specialists found (' + reports.length + ')'))
+    box.appendChild(head)
+
+    var list = el('div', 'rlist')
+    var body = el('div', 'rbody')
+    body.hidden = true
+
+    reports.forEach(function (report) {
+      var row = el('button', 'ritem')
+      row.type = 'button'
+      row.appendChild(el('span', 'rkind', report.kind === 'reviews' ? 'review' : 'audit'))
+      row.appendChild(el('span', 'rtitle', report.title))
+      row.appendChild(el('span', 'rwhen', ago(new Date(report.at * 1000).toISOString())))
+      row.addEventListener('click', function () {
+        clear(body)
+        body.hidden = false
+        body.appendChild(el('p', 'muted', 'Loading…'))
+        get('/api/projects/' + encodeURIComponent(project.slug) +
+            '/reports/' + encodeURIComponent(report.kind) +
+            '/' + encodeURIComponent(report.name))
+          .then(function (doc) {
+            clear(body)
+            renderMarkdown(doc.text, body)
+            if (doc.truncated) body.appendChild(el('p', 'muted', 'Shown in part — this report is long.'))
+            body.scrollTop = 0
+          })
+          .catch(function (err) {
+            clear(body)
+            body.appendChild(el('p', 'muted', err.message || 'Could not open that report.'))
+          })
+      })
+      list.appendChild(row)
+    })
+
+    box.appendChild(list)
+    box.appendChild(body)
+    return box
+  }
+
   function renderProject (project) {
     titleEl.textContent = project.name
     botsEl.hidden = true
@@ -486,6 +583,8 @@
       view.appendChild(strip)
     })
 
+    var reportsBox = renderReports(project)
+
     if (!project.hasChecklist) {
       var blank = el('div', 'empty')
       blank.appendChild(el('p', null, 'This project has no feature checklist yet.'))
@@ -505,6 +604,7 @@
     wrap.appendChild(column('Doing', columns.doing, 'doing'))
     wrap.appendChild(column('Done', columns.done, 'done'))
     view.appendChild(wrap)
+    if (reportsBox) view.appendChild(reportsBox)
 
     var chats = bots.filter(function (bot) { return bot.handle })
     if (chats.length > 0) {

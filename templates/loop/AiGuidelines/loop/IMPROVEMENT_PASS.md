@@ -17,6 +17,23 @@ screen is wasted.
 
 ---
 
+## 0. Design replication — only when the owner gave you a design
+
+Specialist: **design-fidelity-reviewer**. Full brief: `AiGuidelines/loop/DESIGN_REPLICATION.md`.
+
+Skip this milestone entirely if there is nothing in `AiGuidelines/design/reference/`. If there is,
+it runs **first** — before onboarding, before anything. Every later milestone is about improving the
+app; this one is about matching what the owner already decided, and improving something you have not
+yet matched just moves it further away.
+
+Per screen: render it with Roborazzi, hand the render and the reference to the reviewer, fix its
+findings biggest-first, re-render, repeat until it says MATCH. Bounded — six passes per screen, or
+two passes gaining under 3 points, whichever comes first. The reference wins every aesthetic
+argument, including against the UI/UX milestone below.
+
+Done when: every referenced screen scores MATCH, or its remaining gap is written down as a named
+deviation with a reason.
+
 ## 1. Onboarding — the first impression
 
 Specialist: **onboarding-specialist**
@@ -50,6 +67,12 @@ Audit every screen against the design guidelines: consistent spacing and rhythm,
 hierarchy, a real colour system (kill the default purple), consistent corners, shadows and shapes,
 tap targets big enough to hit, accessibility, dark mode, and proper loading, empty and error states
 everywhere.
+
+**On screens that have a design reference, this milestone does not get an opinion.** Milestone 0
+already matched them, and "improving" them here would walk the build away from what the owner asked
+for. On those screens the reviewer may only raise objective problems — failing contrast, tap targets
+too small, truncated text, a missing loading/empty/error state — and it reports them for the owner to
+decide rather than changing them. Unreferenced screens get the full treatment.
 
 Done when: it looks intentional and premium — not like a template with the logo swapped.
 

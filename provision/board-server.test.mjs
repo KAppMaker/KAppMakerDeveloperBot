@@ -308,3 +308,77 @@ describe('the polled feed', () => {
     assert.ok(next.seq > first.seq, 'the cursor moves forward')
   })
 })
+
+describe('audit reports', () => {
+  const slug = 'ReportApp'
+  const dir = path.join(PROJECTS, slug)
+  const reports = path.join(dir, '.loop/reports')
+  const reviews = path.join(dir, '.loop/reviews')
+
+  before(() => {
+    fs.mkdirSync(reports, { recursive: true })
+    fs.mkdirSync(reviews, { recursive: true })
+    fs.writeFileSync(path.join(reports, 'onboarding-audit.md'),
+      '# Onboarding audit\n\nThe first screen asks for a sign-in before showing anything.\n')
+    fs.writeFileSync(path.join(reports, 'paywall-audit.md'),
+      'no heading here, just prose\n')
+    fs.writeFileSync(path.join(reviews, 'ui-review.md'), '## UI review\n\nSpacing is inconsistent.\n')
+    // Empty and non-markdown files are noise, not reports.
+    fs.writeFileSync(path.join(reports, '.gitkeep'), '')
+    fs.writeFileSync(path.join(reports, 'notes.txt'), 'not a report')
+    // Give the newest file a distinctly later mtime so ordering is deterministic.
+    const later = new Date(Date.now() + 60_000)
+    fs.utimesSync(path.join(reviews, 'ui-review.md'), later, later)
+  })
+
+  it('lists reports and reviews, newest first', () => {
+    const list = board.listReports(slug)
+    const names = list.map((r) => r.name)
+    assert.ok(names.includes('onboarding-audit.md'))
+    assert.ok(names.includes('ui-review.md'))
+    assert.equal(list[0].name, 'ui-review.md', 'newest first — last night beats last July')
+    assert.ok(!names.includes('.gitkeep'), 'empty placeholder is not a report')
+    assert.ok(!names.includes('notes.txt'), 'non-markdown is not a report')
+  })
+
+  it('titles a report from its first heading, falling back to the filename', () => {
+    const list = board.listReports(slug)
+    assert.equal(list.find((r) => r.name === 'onboarding-audit.md').title, 'Onboarding audit')
+    assert.equal(list.find((r) => r.name === 'paywall-audit.md').title, 'paywall-audit')
+  })
+
+  it('surfaces reports on the project payload', () => {
+    const payload = board.buildProject(slug)
+    assert.ok(payload.reports.length >= 3, 'the project view can see its own audits')
+  })
+
+  it('reads one report back', () => {
+    const doc = board.readReport(slug, 'reports', 'onboarding-audit.md')
+    assert.match(doc.text, /asks for a sign-in/)
+    assert.equal(doc.truncated, false)
+  })
+
+  it('redacts secrets quoted inside a report', () => {
+    fs.writeFileSync(path.join(reports, 'leaky.md'),
+      '# Leak\n\nThe bot token is 1234567890:AAFakeTokenValueThatIsLongEnoughToMatch123\n')
+    const doc = board.readReport(slug, 'reports', 'leaky.md')
+    assert.ok(!doc.text.includes('AAFakeTokenValueThatIsLongEnoughToMatch123'),
+      'an audit quotes source and command output freely — that is where a key gets pasted by accident')
+  })
+
+  it('refuses anything outside the project .loop directory', () => {
+    assert.equal(board.resolveReport(slug, 'reports', '../../../etc/passwd'), null)
+    assert.equal(board.resolveReport(slug, '../..', 'x.md'), null)
+    assert.equal(board.resolveReport(slug, 'secrets', 'x.md'), null, 'only reports and reviews')
+    assert.equal(board.resolveReport(slug, 'reports', 'notes.txt'), null, 'markdown only')
+    assert.equal(board.resolveReport('../etc', 'reports', 'x.md'), null)
+    assert.equal(board.readReport(slug, 'reports', 'nope.md'), null)
+  })
+
+  it('refuses a symlink that points out of the project', () => {
+    const outside = path.join(BOX, 'outside-secret.md')
+    fs.writeFileSync(outside, '# secret\n')
+    fs.symlinkSync(outside, path.join(reports, 'sneaky.md'))
+    assert.equal(board.resolveReport(slug, 'reports', 'sneaky.md'), null)
+  })
+})

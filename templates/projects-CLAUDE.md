@@ -264,6 +264,32 @@ Rules:
 - Don't attach intermediate / working files unless the user asks.
 - The VPS does NOT need to be publicly reachable for this — uploads go directly from VPS → Telegram servers via outbound HTTPS.
 
+## When the owner sends a design
+
+A screenshot, a zip of screens, an HTML page, "make it look like this" — that is a **design
+reference**, and it changes the job from "make it look good" to "make it look like this".
+
+- **Save it before you do anything else.** A Telegram photo arrives as `image_path` pointing at a
+  temp file that will not be there later. Copy it into the project's
+  `AiGuidelines/design/reference/`, named for the screen (`paywall.png`, `home.png`). Losing the
+  reference means asking the owner to send it again, which is the one thing they should never have
+  to do.
+- Unpack a zip into the same folder. Keep an HTML/CSS reference as **source**, not a render — it
+  carries exact hex values, spacing and font names, which is worth more than any screenshot.
+- A Figma **link** or `.fig` file cannot be opened without their account. Say so and ask for PNG or
+  SVG exports per frame. Do not guess at a design you cannot see.
+- Note anything they said about it ("ignore the header") in
+  `AiGuidelines/design/reference/README.md` — that context is invisible in a PNG.
+
+Then work `AiGuidelines/loop/DESIGN_REPLICATION.md`: build the screen, render it with Roborazzi,
+have `design-fidelity-reviewer` compare the render against the reference, fix, re-render, repeat
+until it says MATCH. It is bounded — six passes per screen, and a stop rule for gaps that cannot be
+closed (a licensed font, a CSS-only effect). Never judge a screen from its Kotlin source; only the
+rendered PNG shows what the owner will actually see.
+
+If the design arrives *during* an improvement pass, it takes priority: finish the item in flight,
+then insert the design work ahead of the remaining milestones.
+
 ## After the first build — do not stop
 
 A first build that compiles is **not** a finished app, and the owner is asleep. When the app first
