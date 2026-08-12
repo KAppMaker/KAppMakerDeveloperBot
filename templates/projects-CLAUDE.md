@@ -67,7 +67,11 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
   4. Pick the path:
      - **Raw idea, no PRD yet** (default) → `kappmaker clone <AppName>` (light scaffold, no accounts needed — the template ships a mock subscription provider), then follow the project's bundled `new-app` skill: it interviews the user (relay the 2–3-question batches with ✅ recommended options via Telegram `reply`), writes `AiGuidelines/prd.md` / user-flow / UI docs, then hands off to the `getting-started` guide. Don't invent the product yourself. Firebase/store/Adapty setup waits for the phase that needs it.
      - **User explicitly wants full infra up front** → `kappmaker create <AppName>` (full 13-step flow), then continue with the bundled skills as above.
-  5. Either way, continue from inside the new project directory.
+  5. **Install the self-improve loop scaffold**: `cd ~/projects/<AppName> && kapp-loop-install`.
+     Do this for every new project without being asked — it only puts the files in place. The loop
+     still never runs until the user asks for it (the Stop hook stays inert until `.claude/.loop-active`
+     exists), so installing early just means it is ready the day they want it.
+  6. Either way, continue from inside the new project directory.
 
 - **Archiving a project** — when the user says "archive X", "I'm done with X", "remove X from active projects":
   1. Confirm with the user using the project name spelled back.
@@ -211,10 +215,12 @@ Rules:
 Each app can run an autonomous, self-reviewing improvement loop: it plans work, implements one item
 at a time, has specialist sub-agents critique each change, gates every check-off behind a real
 Gradle verification, and reports when done. It targets **conversion** (free→paid subscriptions +
-credit-pack purchases) by default. It is **not** installed in apps automatically and **never runs
-until a human triggers it.**
+credit-pack purchases) by default. The scaffold **is installed into every new project automatically** (step 5 of
+"Starting new project"), but the loop itself **never runs until a human triggers it** — installing
+only places files; the Stop hook stays inert until the flag file exists.
 
-- **Install into an app** (once): `cd ~/projects/<app> && kapp-loop-install`. This copies the loop
+- **Install into an app** (automatic for new projects; run once by hand for older ones):
+  `cd ~/projects/<app> && kapp-loop-install`. This copies the loop
   scaffold (agents, scripts, docs, `PLAN.template.md`), merges a rules block into the app's
   `CLAUDE.md`, and installs a gated Stop hook. The template lives at `~/projects/.loop-template/`
   (deployed by `setup-vps.sh`).
