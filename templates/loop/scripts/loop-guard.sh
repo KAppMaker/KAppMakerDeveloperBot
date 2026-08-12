@@ -31,10 +31,14 @@ CAP="${KAPP_LOOP_CAP:-25}"
 # Three of the four stop paths used to be silent, which is why a stalled run and
 # a finished run looked identical from the owner's phone. Force one final turn so
 # the agent can say what happened, then stop for real on the next pass.
+# $1 = what to tell the owner. $2 = "keep-flag" to leave the loop resumable (red build),
+# anything else clears it. The flag is cleared HERE, on the second pass — a caller that
+# cleared it first would trip the "loop off" check above and never announce anything.
 ANNOUNCED=".claude/.loop-announced"
 announce_then_stop() {
   if [ -f "$ANNOUNCED" ]; then
     rm -f "$ANNOUNCED"
+    [ "${2:-}" = "keep-flag" ] || rm -f "$FLAG"
     exit 0
   fi
   : > "$ANNOUNCED"
@@ -50,7 +54,7 @@ case "$INPUT" in
 esac
 
 # --- 2. loop off by default ---
-[ -f "$FLAG" ] || exit 0
+[ -f "$FLAG" ] || { rm -f ".claude/.loop-announced" 2>/dev/null; exit 0; }
 
 # --- 3. iteration cap ---
 COUNT=0
@@ -58,9 +62,8 @@ COUNT=0
 COUNT=$((COUNT + 1))
 echo "$COUNT" > "$COUNT_FILE"
 if [ "$COUNT" -gt "$CAP" ]; then
-  rm -f "$FLAG"
   echo "loop-guard: iteration cap ($CAP) reached — stopping the loop and removing the flag." >&2
-  exit 0
+  announce_then_stop "The improvement run hit its iteration cap of $CAP passes, so it is stopping here rather than running forever. Send the owner one short message: what you finished, what is still open, and that they can say continue to start a fresh run. Then stop."
 fi
 
 # --- detect Gradle root: ./gradlew, else MobileApp/gradlew ---
@@ -84,7 +87,7 @@ esac
 if [ "$VERIFY_RESULT" = "run" ]; then
   if [ -z "$GRADLE_ROOT" ]; then
     echo "loop-guard: no gradlew found (looked at ./ and ./MobileApp) — cannot verify, stopping." >&2
-    exit 0
+    announce_then_stop "The loop cannot find a Gradle wrapper here, so it has no way to verify a change is safe and is stopping. Tell the owner in one short message that this project is missing its build setup and nothing was changed." keep-flag
   fi
 
   # Determine which files changed for this item: last commit + any uncommitted changes.
@@ -133,18 +136,18 @@ if [ "$VERIFY_RESULT" = "fail" ]; then
   # can resume after the failure is fixed.
   echo "loop-guard: verification gate FAILED — stopping the loop (flag left in place for resume)." >&2
   echo "Fix the failing build/tests before continuing. The current PLAN.md item was NOT checked off." >&2
-  exit 0
+  announce_then_stop "The build or tests went red, so the loop stopped rather than checking off work on a broken build. Send the owner one short message in plain words: what broke, whether you can fix it, and what you need from them if you cannot. Then stop." keep-flag
 fi
 
 # --- 5/6. gate passed: continue if work remains, else finish ---
 if [ -f "PLAN.md" ] && grep -q '^[[:space:]]*-[[:space:]]\[ \]' "PLAN.md"; then
   REASON="Verification gate passed. The self-improve loop is active and PLAN.md still has unchecked items. Continue: take the next \`- [ ]\` item in PLAN.md, follow AiGuidelines/loop/SELF_IMPROVE_LOOP.md (implement smallest change -> spawn relevant specialists to review -> synthesize & log decisions -> run the tiered gate -> only on green, check the box and commit). Work exactly one item, then end your turn."
+  rm -f "$ANNOUNCED"
   printf '{"decision":"block","reason":"%s"}\n' "$REASON"
   exit 0
 fi
 
 # No unchecked items remain (or no PLAN.md): the run is complete. The workflow already wrote the
 # report; turn the loop off.
-rm -f "$FLAG"
 echo "loop-guard: PLAN.md has no unchecked items — loop complete, flag removed." >&2
-exit 0
+announce_then_stop "Every item in PLAN.md is done and the build is green. Send the owner one short message: what you improved and what it means for someone using the app. Plain words, no jargon. Then stop."
