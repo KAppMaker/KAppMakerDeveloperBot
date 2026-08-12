@@ -70,7 +70,12 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
   4. Pick the path:
      - **Raw idea, no PRD yet** (default) → `kappmaker clone <AppName>` (light scaffold, no accounts needed — the template ships a mock subscription provider), then follow the project's bundled `new-app` skill: it interviews the user (relay the 2–3-question batches with ✅ recommended options via Telegram `reply`), writes `AiGuidelines/prd.md` / user-flow / UI docs, then hands off to the `getting-started` guide. Don't invent the product yourself. Firebase/store/Adapty setup waits for the phase that needs it.
      - **User explicitly wants full infra up front** → `kappmaker create <AppName>` (full 13-step flow), then continue with the bundled skills as above.
-  5. **Read the new project's own instructions before building anything**:
+  5. **Confirm the app name and app id** (`com.{company}.{app}`, lowercase, no spaces), then
+     `kappmaker refactor` to that id — the rename only, no full setup yet. Do this BEFORE any store
+     record exists.
+  6. **Create a private GitHub repo and push the initial commit**, so every later change is easy to
+     compare against the untouched template.
+  7. **Read the new project's own instructions before building anything**:
      - `~/projects/<AppName>/CLAUDE.md` — the project's own rules (stack, conventions, gotchas).
      - `~/projects/<AppName>/.claude/skills/README.md` — the index of skills the boilerplate ships
        for THIS codebase (real paths, real commands). Use them instead of improvising.
@@ -79,11 +84,14 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
      never restarts, so `cd`-ing into a project does NOT load that project's `CLAUDE.md` for you.
      If you skip this you will be working from workspace-wide rules only, and you will miss the
      project's own conventions.
-  6. **Install the self-improve loop scaffold**: `cd ~/projects/<AppName> && kapp-loop-install`.
+  8. **Install the self-improve loop scaffold**: `cd ~/projects/<AppName> && kapp-loop-install`.
      Do this for every new project without being asked — it only puts the files in place. The loop
      still never runs until the user asks for it (the Stop hook stays inert until `.claude/.loop-active`
      exists), so installing early just means it is ready the day they want it.
-  7. Either way, continue from inside the new project directory.
+  9. **Fill in the guideline files** (idea, user flow, design, voice, onboarding, paywall, sharing)
+     following what the project's CLAUDE.md says each is for — via the bundled `new-app` skill's
+     interview. **Show them to the owner and wait for approval** before building.
+  10. Then plan the build and keep going — build, review, verify — until the app runs.
 
 - **Archiving a project** — when the user says "archive X", "I'm done with X", "remove X from active projects":
   1. Confirm with the user using the project name spelled back.
@@ -255,6 +263,26 @@ Rules:
 - Photo uploads via `sendPhoto` are capped at 10 MB and Telegram will compress them — for full-quality screenshots over 10 MB, send as document.
 - Don't attach intermediate / working files unless the user asks.
 - The VPS does NOT need to be publicly reachable for this — uploads go directly from VPS → Telegram servers via outbound HTTPS.
+
+## After the first build — do not stop
+
+A first build that compiles is **not** a finished app, and the owner is asleep. When the app first
+builds and runs, do **not** report "done" and wait. Start the full improvement pass yourself:
+
+`AiGuidelines/loop/IMPROVEMENT_PASS.md` in the project is the standing brief — onboarding →
+paywall → UI/UX → quality → growth → delight, each one a deep audit with its specialist, findings
+turned into to-dos, then fixed one at a time with a specialist review and a green build between
+each.
+
+- **Announce it, don't ask.** One short message: the app builds, here is what it looks like, and
+  you are now working through the improvement pass. Then get on with it.
+- **Message at milestone boundaries only** — not per change. The owner chose this product so their
+  phone would stay quiet.
+- **Stop** when they say stop, at the iteration cap, or on a red build you cannot recover.
+- The owner can still start a single milestone by hand any time ("run the loop on the paywall") —
+  this rule only removes the need to ask for the obvious.
+
+If the loop scaffold is somehow missing, install it (`kapp-loop-install`) and carry on.
 
 ## Self-improving dev loop (opt-in, OFF by default)
 

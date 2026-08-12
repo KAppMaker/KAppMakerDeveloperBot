@@ -28,3 +28,10 @@ finish — is the law of this repo:
 - **Conversion work stays ethical.** No dark patterns / fake scarcity / deceptive cancel — refuse
   even if it would lift the metric.
 <!-- KAPPMAKER-SELF-IMPROVE-LOOP:END -->
+
+## After the first build
+
+When this app first builds and runs, start the full improvement pass automatically — the brief is
+`AiGuidelines/loop/IMPROVEMENT_PASS.md` (onboarding → paywall → UI/UX → quality → growth →
+delight). Announce it in one message, then work milestone by milestone, reporting only at milestone
+boundaries. Do not wait to be asked.
