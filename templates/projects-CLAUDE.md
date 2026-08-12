@@ -53,7 +53,10 @@ can recover — read it with `cat ~/.claude/session-history.md` (or the absolute
 When the user says "switch to X", "work on X", "let's do X", or similar:
 
 1. `cd ~/projects/X` (use partial / fuzzy match if exact name isn't given — confirm before acting if ambiguous)
-2. If `~/projects/X/CLAUDE.md` exists, read it before doing anything else
+2. If `~/projects/X/CLAUDE.md` exists, read it before doing anything else — plus
+   `X/.claude/skills/README.md` if present, for that project's own skills. Reading is required:
+   this session started in `~/projects` and does not pick up a project's `CLAUDE.md` just because
+   you changed directory into it.
 3. Acknowledge the switch in one short line so the user knows context changed
 
 When the user says "list projects" or "what apps do we have": run `ls ~/projects/` and report the names (skip dotfiles like `.archived/`).
@@ -67,11 +70,20 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
   4. Pick the path:
      - **Raw idea, no PRD yet** (default) → `kappmaker clone <AppName>` (light scaffold, no accounts needed — the template ships a mock subscription provider), then follow the project's bundled `new-app` skill: it interviews the user (relay the 2–3-question batches with ✅ recommended options via Telegram `reply`), writes `AiGuidelines/prd.md` / user-flow / UI docs, then hands off to the `getting-started` guide. Don't invent the product yourself. Firebase/store/Adapty setup waits for the phase that needs it.
      - **User explicitly wants full infra up front** → `kappmaker create <AppName>` (full 13-step flow), then continue with the bundled skills as above.
-  5. **Install the self-improve loop scaffold**: `cd ~/projects/<AppName> && kapp-loop-install`.
+  5. **Read the new project's own instructions before building anything**:
+     - `~/projects/<AppName>/CLAUDE.md` — the project's own rules (stack, conventions, gotchas).
+     - `~/projects/<AppName>/.claude/skills/README.md` — the index of skills the boilerplate ships
+       for THIS codebase (real paths, real commands). Use them instead of improvising.
+     - `PROGRESS_SETUP.md` if `kappmaker create` wrote one — it says which scaffolding steps ran.
+     **Why this is a step and not automatic:** the always-on session started in `~/projects` and
+     never restarts, so `cd`-ing into a project does NOT load that project's `CLAUDE.md` for you.
+     If you skip this you will be working from workspace-wide rules only, and you will miss the
+     project's own conventions.
+  6. **Install the self-improve loop scaffold**: `cd ~/projects/<AppName> && kapp-loop-install`.
      Do this for every new project without being asked — it only puts the files in place. The loop
      still never runs until the user asks for it (the Stop hook stays inert until `.claude/.loop-active`
      exists), so installing early just means it is ready the day they want it.
-  6. Either way, continue from inside the new project directory.
+  7. Either way, continue from inside the new project directory.
 
 - **Archiving a project** — when the user says "archive X", "I'm done with X", "remove X from active projects":
   1. Confirm with the user using the project name spelled back.
