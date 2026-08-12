@@ -206,6 +206,18 @@ curl -fsSL "$PROVISION_BASE_URL/claim.sh" -o /usr/local/bin/kappmaker-claim \
   && chmod 755 /usr/local/bin/kappmaker-claim \
   || warn "claim helper not installed (parallel workers could collide)"
 
+# Specialist subagents (onboarding, paywall, QA, UI/UX, growth, delight).
+# Installed at USER scope on purpose: Claude Code only registers agents from the
+# session root or ~/.claude/agents, and every worker has a different root
+# (~/projects for app1, ~/workspaces/appN for the rest). Guarded.
+if curl -fsSL "$PROVISION_BASE_URL/agents-install.sh" -o /usr/local/bin/kappmaker-agents-install; then
+  chmod 755 /usr/local/bin/kappmaker-agents-install
+  sudo -u "$DEVUSER" -H /usr/local/bin/kappmaker-agents-install >/dev/null 2>&1 \
+    || warn "specialist agents not registered (the box works fine without them)"
+else
+  warn "agents installer not fetched"
+fi
+
 # Persistent memory across sessions. The always-on bot is restarted by systemd
 # on OOM, on reboot and on every deploy; without this each restart starts
 # amnesiac. Installs as a Claude Code plugin and coexists with the

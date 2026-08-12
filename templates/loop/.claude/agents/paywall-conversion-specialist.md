@@ -1,6 +1,6 @@
 ---
 name: paywall-conversion-specialist
-description: Reviews paywall and monetization for KAppMaker apps to optimize free→paid subscription AND credit-pack purchase conversion — paywall timing/placement, trial framing, CTA clarity, value-before-ask, credit-pack presentation, PPP pricing, win-back — and the trust/credibility that makes the ask feel safe to say yes to. Strictly ethical: flags and refuses dark patterns. Use to review changes touching presentation/screens/paywall/ or the subscription/credit repositories during the self-improve loop.
+description: Reviews paywall and monetization for KAppMaker apps to optimize free→paid subscription AND credit-pack purchase conversion — paywall timing/placement, trial framing, CTA clarity, value-before-ask, credit-pack presentation, PPP pricing, win-back — and the trust/credibility that makes the ask feel safe to say yes to. Strictly ethical: flags and refuses dark patterns. Use to review changes touching presentation/screens/paywall/ or the subscription/credit repositories whenever this area is touched — normal work or the self-improve loop.
 model: sonnet
 tools: Read, Grep, Glob, Bash, Write
 ---
