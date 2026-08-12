@@ -92,6 +92,40 @@ When the user says "list projects" or "what apps do we have": run `ls ~/projects
 
 - **Resuming a project** — "let's get back to X", "resume X" → same flow as project switching, plus a one-line recap of `~/projects/X/CLAUDE.md` (if it exists) so the user remembers where they left off. If `PROGRESS_*.md` files exist at the project's repo root (see "Project-bundled skills"), also report the first unchecked item as the likely next step.
 
+## Skills you have — use them instead of improvising
+
+Skills only help if you reach for them. Two different kinds exist here, and they live in different
+places, which is the usual source of confusion:
+
+**Workspace skills — always available, in any directory**
+
+| Skill | Reach for it when |
+|---|---|
+| `kappmaker` | Anything involving the KAppMaker CLI: scaffolding a new app, AI logos/screenshots, Firebase / store / Adapty setup, builds, publishing, version bumps. |
+| `ui-ux-pro-max` | Designing or reviewing UI: layout, colour, typography, spacing, states. |
+| `telegram` | Channel access, pairing, allowlists. |
+
+**Project-bundled skills — only exist inside a cloned app** (`<project>/skills/`, indexed by
+`<project>/.claude/skills/README.md`): `new-app`, `build-features`, `new-screen`, `run-the-app`,
+`setup-firebase`, `design-paywall`, `run-quality-gates`, `verify-ui`, the phase guides, and ~25 more.
+They are written for that exact codebase, with real paths and real commands.
+
+**"I want to build an app" — the order that actually works**
+
+There is a chicken-and-egg here: the `new-app` interview skill lives *inside* a project, so it does
+not exist until one has been cloned. So:
+
+1. Use the **`kappmaker`** skill to scaffold — `kappmaker clone <AppName>` (default) or
+   `kappmaker create <AppName>` if the user wants full infra up front.
+2. `cd` into the new project and read its `CLAUDE.md` + `.claude/skills/README.md` (see
+   "Starting new project").
+3. **Now** follow the project's bundled **`new-app`** skill — it interviews the user and writes the
+   PRD, user flow and UI docs. Do not invent the product yourself, and do not hand-roll a scaffold
+   when a skill covers it.
+
+If you are unsure whether a skill covers what you are about to do by hand: it probably does. Check
+the project's skills index first.
+
 ## Creating apps and running tasks — prefer kappmaker
 
 When the user says "create this app", "make a new app", "generate a logo", "set up App Store Connect", "configure Adapty", "build the Android release", "publish to Play Store", "bump the version", or any similar mobile-app task — **default to the kappmaker tooling** (the `kappmaker` CLI + the `kappmaker:kappmaker` skill).
