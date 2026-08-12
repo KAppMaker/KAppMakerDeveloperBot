@@ -47,8 +47,11 @@ else
   echo "start-loop: PLAN.md already exists — keeping it (resuming)."
 fi
 
-# 4. reset counter + raise the flag
+# 4. reset all run state + raise the flag.
+# The stall bookkeeping has to go too: a leftover stall count from a previous run would make
+# a healthy new run look stuck within a pass or two, and the guard would stop it immediately.
 echo 0 > .claude/.loop-count
+rm -f .claude/.loop-remaining .claude/.loop-stall .claude/.loop-announced
 : > .claude/.loop-active
 
 echo "start-loop: loop ACTIVE. Goal: $GOAL"

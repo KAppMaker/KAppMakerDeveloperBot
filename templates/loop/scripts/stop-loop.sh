@@ -11,7 +11,8 @@ DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 cd "$DIR" || exit 1
 
 if [ -f ".claude/.loop-active" ]; then
-  rm -f ".claude/.loop-active"
+  rm -f ".claude/.loop-active" ".claude/.loop-remaining" ".claude/.loop-stall" \
+        ".claude/.loop-announced"
   echo "stop-loop: loop stopped (flag removed). Committed work is preserved."
 else
   echo "stop-loop: loop was not active — nothing to do."
