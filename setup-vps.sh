@@ -605,7 +605,10 @@ NEXT STEPS (interactive — cannot be scripted)
    and "stop the loop" to end. No slash commands.
 
 ────────────────────────────────────────────────────────────
-Reminder: iOS builds need macOS/Xcode, so .ipa builds won't work
-on this VPS. App Store Connect metadata setup via kappmaker still works.
+Reminder: Xcode needs macOS, so .ipa files cannot be COMPILED on this VPS —
+but you can still ship iOS from here: `kappmaker ios-ci init` once, then
+`kappmaker ios-ci build` runs the build on a GitHub macOS runner and uploads
+to TestFlight / the App Store. Everything else (App Store Connect records,
+products, pricing, metadata, ASO) already works from Linux.
 ────────────────────────────────────────────────────────────
 NEXT
