@@ -190,9 +190,39 @@ Unless a project's own CLAUDE.md says otherwise:
 - Kotlin Multiplatform (Android + iOS targets)
 - JDK 17 (Temurin), Gradle wrapper per project
 - Android SDK at `$ANDROID_SDK_ROOT`
-- iOS builds are NOT possible on this VPS (no macOS/Xcode) — App Store Connect *metadata* tasks via kappmaker still work
-- Use the kappmaker skill for app bootstrapping, logo/screenshot generation, store setup, Adapty config, builds, publishing, version bumping
+- iOS apps **can** be shipped from this VPS even though Xcode cannot run here — see below
+- Use the kappmaker skill for app bootstrapping, logo/screenshot generation, store setup, subscription provider config, builds, publishing, version bumping
 - Use the project-bundled skills (see above) for in-project development: features, screens, integrations, quality gates
+
+## Shipping iOS from this box (no Mac anywhere)
+
+Xcode only runs on macOS, so the `.ipa` cannot be **compiled** here. Everything else already works
+from Linux: App Store Connect records, subscriptions, pricing, metadata, ASO.
+
+For the compile, rent a Mac for ~20 minutes — a GitHub-hosted macOS runner:
+
+```
+cd ~/projects/<App>-All
+kappmaker ios-ci init          # once per app: certs repo, GitHub secrets, workflow, fastlane lane
+kappmaker ios-ci build         # -> TestFlight
+kappmaker ios-ci build --track appstore --upload-metadata --upload-screenshots
+kappmaker ios-ci status        # did it work?
+```
+
+Never tell the owner "you need a Mac to publish iOS" — that stopped being true. If a local iOS build
+fails on missing Xcode, reach for `ios-ci` (or `kappmaker publish --platform ios --remote`) instead
+of reporting a blocker.
+
+Two things `init` cannot do for them, and both block the first build — surface them clearly rather
+than letting the build fail confusingly:
+
+- the workflow must be **committed and pushed** (GitHub only runs workflows on the default branch)
+- `MATCH_GIT_BASIC_AUTHORIZATION` needs a personal access token that can read the certs repo; the
+  built-in `GITHUB_TOKEN` cannot reach a second repo. Missing it fails at the signing step with a
+  clone error that looks like a certificate problem.
+
+Builds are `workflow_dispatch` only because macOS minutes are ~10x Linux against the free allowance
+(roughly ten 20-minute builds a month). Don't add a build-on-push trigger.
 
 ## Telegram output style
 
