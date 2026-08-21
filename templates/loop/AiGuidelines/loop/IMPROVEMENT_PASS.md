@@ -95,21 +95,27 @@ Specialist: **growth-virality-specialist**
 
 Audit: moments genuinely worth sharing, a referral structure that rewards both sides, when and how
 you ask for a rating, links that open the right screen, and the events that show whether any of it
-works.
+works. Retention mechanics (streaks, reminders, celebrations) belong to milestone 6 — flag them
+there rather than fixing them here.
 
 No spam, no contact scraping, nothing pushy. Refuse growth hacks that would embarrass the user.
 
 Done when: there is at least one loop a happy user would actually complete without being nagged.
 
-## 6. Delight — make it feel alive
+## 6. Delight & engagement — make it feel alive, make it worth returning to
 
-Specialist: **delight-specialist**
+Specialists: **delight-specialist**, **engagement-specialist**
 
-Audit every place the app feels cheap, flat or default. Then polish: a little haptic buzz on
+Audit every place the app feels cheap, flat or default — then polish: a little haptic buzz on
 success, smooth motion at the big moments, loading and empty screens with personality, transitions
 that feel satisfying.
 
-Done when: it feels like someone cared.
+Then audit the reward system per `ENGAGEMENT_PLAYBOOK.md`: does session one contain an earned win
+with a real celebration? Is there a visible milestone ladder? Do streaks forgive? Are reminders
+tied to value moments and capped? Run the mascot fit test — and only where it passes, propose the
+companion (states mapped to real progress, art in the app's style).
+
+Done when: it feels like someone cared, and there is a reason to come back tomorrow.
 
 ---
 

@@ -59,9 +59,9 @@ then tailors the milestones/items to the actual goal the human gave.
   iteration). If the tree is dirty when you begin an item, commit or stash the prior work first.
 
 ### 3. Review (parallel specialists)
-Spawn the relevant specialist sub-agents to critique the change (cap **3–4 concurrent** — with six
-specialists available, pick the most relevant by tag and changed files, never all of them). Pick by
-the item's reviewer tags and by what files changed:
+Spawn the relevant specialist sub-agents to critique the change (cap **3–4 concurrent** — with
+eight specialists available, pick the most relevant by tag and changed files, never all of them).
+Pick by the item's reviewer tags and by what files changed:
 - `onboarding-specialist` — onboarding / activation / first-run.
 - `paywall-conversion-specialist` — paywall, subscription, credit-pack, pricing.
 - `ui-ux-reviewer` — any Compose UI / design-system / screen change.
@@ -71,6 +71,17 @@ the item's reviewer tags and by what files changed:
 - `delight-specialist` — haptics, micro-interactions, motion polish, premium feel. Spawn when the
   item is tagged `delight` or touches a hero moment (onboarding finale, paywall, success states);
   skip for pure logic changes.
+- `engagement-specialist` — the reward/progress system: celebrations, streaks, milestones,
+  retention cadence, mascot/companion fit. Spawn when the item is tagged `engagement` or touches
+  streak/milestone/celebration/notification-cadence/mascot code.
+- `design-fidelity-reviewer` — scores a rendered screen against the owner's reference in
+  `AiGuidelines/design/reference/`. Spawn for any changed screen that has a reference
+  (see `DESIGN_REPLICATION.md`); it reports scores rather than writing a review file.
+
+When the goal or an item is too vague to state a verification for, spawn `prompt-architect` first —
+it returns a Refined Brief (goal, scope, acceptance criteria, tagged plan items) grounded in the
+app's PRD and plan state. It advises before implementation and does not count against the reviewer
+cap.
 
 Each specialist is **read-mostly**: it reviews and recommends but does not edit code. It ends its
 turn by writing `.loop/reviews/<agent>-<ISO8601>.md` with these sections:

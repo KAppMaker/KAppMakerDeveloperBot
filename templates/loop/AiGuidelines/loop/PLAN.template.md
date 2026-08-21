@@ -5,11 +5,13 @@
 > with the reviewer(s) who should critique it. Work the top unchecked item only; append new
 > follow-ups to the bottom; never check a box on a red build.
 >
-> Reviewer tags: `onboarding`, `paywall`, `ui-ux`, `qa`, `growth`, `delight`.
+> Reviewer tags: `onboarding`, `paywall`, `ui-ux`, `qa`, `growth`, `delight`, `engagement`,
+> `design-fidelity`.
 >
 > Ground items in the playbooks: `AiGuidelines/loop/CONVERSION_PLAYBOOK.md` (conversion),
 > `AiGuidelines/loop/GROWTH_PLAYBOOK.md` (growth/virality), `AiGuidelines/loop/DESIGN_PLAYBOOK.md`
-> (visual craft — any `ui-ux`-tagged item), `AiGuidelines/loop/COPY_PLAYBOOK.md` (voice & microcopy
+> (visual craft — any `ui-ux`-tagged item), `AiGuidelines/loop/ENGAGEMENT_PLAYBOOK.md`
+> (celebrations/streaks/mascot — any `engagement`-tagged item), `AiGuidelines/loop/COPY_PLAYBOOK.md` (voice & microcopy
 > — any item that writes user-facing text), and `AiGuidelines/loop/QA_PLAYBOOK.md` (correctness &
 > build safety — any `qa`-tagged item). Order by expected metric impact (goal capture & surfacing
 > usually first), not by screen order. The example items below are a starting point — replace/reorder

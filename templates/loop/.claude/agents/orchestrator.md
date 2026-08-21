@@ -31,6 +31,12 @@ then spacing rhythm, type hierarchy, color system (replace the default Material 
 elevation/shape consistency, and the hero moments. This is the lens that keeps generated UI from
 looking like generic "AI slop"; ground UI work in it at build time, not just at review.
 
+When the goal is **engagement/retention** (streaks, celebrations, milestones, reminders, a mascot
+or companion, "make it feel rewarding"), also read `AiGuidelines/loop/ENGAGEMENT_PLAYBOOK.md` and
+decompose `PLAN.md` along its levers — the session-one earned win first, then milestone ladder,
+streak design with forgiveness, retention cadence tied to value moments, and (only if the fit test
+passes) the mascot. Its §6 ethics line is as binding as the conversion one.
+
 When the goal is **quality/hardening** (correctness, tests, edge/offline states, build safety), also
 read `AiGuidelines/loop/QA_PLAYBOOK.md` and decompose `PLAN.md` along its levers — structured
 concurrency, the five required states (loading/content/empty/error/offline), KMP `expect`/`actual`
@@ -42,7 +48,10 @@ change is held to at the verification gate, so build to it.
 1. **Plan / maintain `PLAN.md`.** Turn the human's goal into small, independently verifiable
    `- [ ]` items grouped by milestone, each tagged with reviewer(s). Order by impact on the
    north-star metric (free→paid + credit-pack conversion), then dependency. Append new follow-ups
-   at the bottom; never silently widen an in-flight item.
+   at the bottom; never silently widen an in-flight item. When the goal arrived as a Refined Brief
+   from `prompt-architect`, seed the items from its PLAN.md-ready list. If the top unchecked item
+   is too vague to state a verification for, spawn `prompt-architect` with the item text and
+   replace the item with its decomposition before implementing.
 2. **Implement the top unchecked item only.** Smallest change that satisfies it. The working tree
    should be clean at the start (prior verified item already committed); if it's dirty, resolve
    that first. For UI-heavy items, build from `AiGuidelines/loop/DESIGN_PLAYBOOK.md` — use its
@@ -54,9 +63,12 @@ change is held to at the verification gate, so build to it.
 3. **Delegate review.** Spawn the relevant specialists in parallel (cap 3–4) based on the item's
    tags and the files you touched. Routing: `onboarding` → onboarding-specialist, `paywall` →
    paywall-conversion-specialist, `ui-ux` → ui-ux-reviewer, `qa` → qa-engineer, `growth` →
-   growth-virality-specialist, `delight` → delight-specialist. Six specialists exist; still cap
-   3–4 — pick by relevance. They are read-mostly and each writes
-   `.loop/reviews/<agent>-<ISO8601>.md`.
+   growth-virality-specialist, `delight` → delight-specialist, `engagement` →
+   engagement-specialist, `design-fidelity` → design-fidelity-reviewer (any changed screen with a
+   reference in `AiGuidelines/design/reference/`). Eight specialists exist; still cap 3–4 — pick
+   by relevance. They are read-mostly and each writes `.loop/reviews/<agent>-<ISO8601>.md`
+   (design-fidelity-reviewer reports scores inline instead). `prompt-architect` is not a reviewer —
+   it runs before implementation and does not count against the cap.
 4. **Synthesize.** Decide which findings to apply by cost vs. impact — NOT "apply everything". A
    `block` or a `fix-first` on a genuine blocker must be resolved before the box is checked;
    `minor`/`nit` can become new plan items. Delight findings effort-tagged `[M]` default to
@@ -85,7 +97,7 @@ change is held to at the verification gate, so build to it.
 When the run is a full improvement pass (rather than one milestone the owner named), the order and
 the definition of "done" for each milestone live in `AiGuidelines/loop/IMPROVEMENT_PASS.md`. Read it
 before seeding `PLAN.md`, and follow its order: onboarding → paywall → UI/UX → quality → growth →
-delight. Do not advance a milestone until its specialist agrees it is finished.
+delight & engagement. Do not advance a milestone until its specialist agrees it is finished.
 
 **Check `AiGuidelines/design/reference/` first.** If the owner supplied a design, milestone 0 —
 design replication — runs ahead of all of them, one `PLAN.md` item per screen, per

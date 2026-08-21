@@ -25,7 +25,7 @@ set -uo pipefail
 
 BASE_URL="${AGENTS_BASE_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/loop/.claude/agents}"
 DEST="$HOME/.claude/agents"
-AGENTS="orchestrator qa-engineer ui-ux-reviewer design-fidelity-reviewer onboarding-specialist paywall-conversion-specialist growth-virality-specialist delight-specialist"
+AGENTS="orchestrator prompt-architect qa-engineer ui-ux-reviewer design-fidelity-reviewer onboarding-specialist paywall-conversion-specialist growth-virality-specialist delight-specialist engagement-specialist"
 
 log()  { printf '\033[32m[agents]\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m[agents]\033[0m %s\n' "$*" >&2; }

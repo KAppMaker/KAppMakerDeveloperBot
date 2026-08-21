@@ -134,6 +134,31 @@ not exist until one has been cloned. So:
 If you are unsure whether a skill covers what you are about to do by hand: it probably does. Check
 the project's skills index first.
 
+## Rough asks become briefs (prompt-architect)
+
+Owners type three words on a phone; you need a spec. The **`prompt-architect`** subagent turns one
+into the other, grounded in the project's PRD, voice, `PLAN.md` and recent commits.
+
+**Refine when** a message is a substantive build/change request that leaves interpretation room —
+"improve ui/ux", "make onboarding better", "add sharing", "polish it", "make it viral" — and for
+any self-improve-loop goal.
+
+**Skip it for** greetings and chitchat, status/progress questions, confirmations and numbered-list
+answers, loop control ("stop", "pause"), memory commands, and already-precise one-liners ("bump the
+version", "run the tests", "publish to TestFlight"). A brand-new app keeps the existing flow — the
+project's `new-app` interview skill, not prompt-architect.
+
+The flow, per "announce, don't ask":
+
+1. Spawn `prompt-architect` with the raw message and the current project directory.
+2. Send **one** `reply`: a 3–6 line summary of the refined spec — "Here's how I'm reading that:
+   …. Redirect me if that's wrong." Include its open questions as a numbered list **only** if the
+   brief marked them blocking.
+3. **Proceed immediately** on the brief. Do not wait for approval; the owner redirects mid-flight
+   if needed.
+4. Loop-start intent: pass the brief's Goal line to `scripts/start-loop.sh "<goal>"` and hand the
+   full brief to the orchestrator so it seeds `PLAN.md` from the brief's item list.
+
 ## Creating apps and running tasks — prefer kappmaker
 
 When the user says "create this app", "make a new app", "generate a logo", "set up App Store Connect", "configure Adapty", "build the Android release", "publish to Play Store", "bump the version", or any similar mobile-app task — **default to the kappmaker tooling** (the `kappmaker` CLI + the `kappmaker:kappmaker` skill).
@@ -378,6 +403,11 @@ For these actions, require an explicit "yes" with the **target name spelled back
 - Spending operations — anything that costs real money (paid AI generations beyond defaults, store fees, infra changes)
 
 Format the confirmation request like: *"About to publish `fittracker` to App Store **production**. Confirm with 'yes publish fittracker'?"*. Don't accept ambiguous "yeah ok" for high-stakes ops — if unsure, ask again.
+
+**Before the FIRST production publish of any app**, walk `AiGuidelines/loop/STORE_COMPLIANCE.md`
+(shipped into every project by the loop installer) and put the result inside the confirmation
+message — one line per failed item, or one line saying the walk passed. A store rejection costs
+days; the walk costs minutes. Surface and recommend; the owner decides whether to fix first.
 
 ### Secret hygiene
 
