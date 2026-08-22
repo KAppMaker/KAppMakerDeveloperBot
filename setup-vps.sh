@@ -291,16 +291,25 @@ fi
 # that's theirs to do interactively in the setup wizard.
 log "Seeding Claude first-run flags for headless operation"
 mkdir -p "$HOME/projects" "$HOME/.claude"
-python3 - <<'PY' || warn "Could not seed Claude first-run flags — a headless start may hit a prompt."
+# The always-on session's model. Without this the box runs whatever the owner's
+# plan defaults to — usually not the strongest model. "best" is Fable 5 where the
+# plan has it and the latest Opus otherwise, so a box never fails to start on a
+# plan without Fable. Set KAPP_DEFAULT_MODEL to pin something else (e.g. "fable"
+# or "claude-fable-5[1m]" for the 1M-context variant). Only seeded when the owner
+# has not already chosen a model; `kappmaker-model session <alias>` changes it
+# later.
+DEFAULT_MODEL="${KAPP_DEFAULT_MODEL:-best}"
+KAPP_DEFAULT_MODEL="$DEFAULT_MODEL" python3 - <<'PY' || warn "Could not seed Claude first-run flags — a headless start may hit a prompt."
 import json, os
-# settings.json — skip the bypass-permissions warning. MERGE (preserve the
-# session-history Stop hook + enabledPlugins written earlier).
+# settings.json — skip the bypass-permissions warning and seed the model. MERGE
+# (preserve the session-history Stop hook + enabledPlugins written earlier).
 sf = os.path.expanduser("~/.claude/settings.json")
 try:
     s = json.load(open(sf))
 except Exception:
     s = {}
 s["skipDangerousModePermissionPrompt"] = True
+s.setdefault("model", os.environ["KAPP_DEFAULT_MODEL"])
 json.dump(s, open(sf, "w"), indent=2)
 # ~/.claude.json — theme (skips the picker), onboarding done, and trust for the
 # projects workspace the bot runs in.
