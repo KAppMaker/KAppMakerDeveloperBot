@@ -165,7 +165,7 @@ fi
 PREVIEW_BASE_URL="${PREVIEW_BASE_URL:-https://raw.githubusercontent.com/KAppMaker/KAppMakerDeveloperBot/main/templates/bin}"
 log "Installing preview scripts to ~/bin"
 mkdir -p "$HOME/bin"
-for script in preview preview-stop kapp-service-install; do
+for script in preview preview-stop kapp-service-install kappmaker-model; do
   if curl -fsSL "$PREVIEW_BASE_URL/$script" -o "$HOME/bin/$script"; then
     chmod +x "$HOME/bin/$script"
   else

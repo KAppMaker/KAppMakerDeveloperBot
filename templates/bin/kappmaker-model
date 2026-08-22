@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# kappmaker-model — switch which model the box runs on, from one command.
+#
+# Two separate things can be switched, and they fail in different ways:
+#
+#   session  — the always-on Claude session the owner talks to. Its model is
+#              read from ~/.claude/settings.json "model" at START, so a change
+#              only lands after a restart (--restart does it; the session comes
+#              back fresh on the new model and recovers context from
+#              session-history.md).
+#   agents   — the subagents (orchestrator, prompt-architect, reviewers). Their
+#              model is the `model:` line in ~/.claude/agents/<name>.md, read at
+#              spawn time, so a change lands on the next spawn with no restart.
+#
+# `downshift` / `restore` exist for the usage-cap case: a Fable-tier subagent
+# spawn that fails on a usage limit is downshifted to Opus so the loop keeps
+# going, and restored later. The MAIN session hitting its own cap cannot be
+# handled from inside it — that is the one case that needs the owner (or a
+# restart on another model via `session`).
+#
+# Safe to re-run. Prints what it changed.
+set -uo pipefail
+
+CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+PROJECTS_DIR="${PROJECTS_DIR:-$HOME/projects}"
+SETTINGS="$CLAUDE_HOME/settings.json"
+AGENTS_DIR="$CLAUDE_HOME/agents"
+STATE="$CLAUDE_HOME/kappmaker-model.state"
+RESTART_CMD="${KAPPMAKER_MODEL_RESTART_CMD:-sudo systemctl restart claude-telegram*}"
+# The agents that run on the top tier by default; downshift/restore act on these.
+FABLE_TIER="${KAPPMAKER_FABLE_TIER:-orchestrator prompt-architect}"
+VALID_ALIASES="fable opus sonnet haiku best"
+
+log()  { printf '\033[32m[model]\033[0m %s\n' "$*"; }
+warn() { printf '\033[33m[model]\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[31m[model]\033[0m %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<EOF
+usage:
+  kappmaker-model show
+  kappmaker-model session <fable|opus|sonnet|haiku|best|default> [--restart]
+  kappmaker-model agents  <fable|opus|sonnet|haiku> [agent ...]   (default: $FABLE_TIER)
+  kappmaker-model downshift [reason]    # Fable-tier agents -> opus, remembers why
+  kappmaker-model restore               # Fable-tier agents -> fable, forgets why
+EOF
+}
+
+valid_alias() {
+  case " $VALID_ALIASES " in *" $1 "*) return 0 ;; *) return 1 ;; esac
+}
+
+session_model() {
+  [ -f "$SETTINGS" ] || { echo "default"; return; }
+  python3 - "$SETTINGS" <<'PY'
+import json,sys
+try:
+    print(json.load(open(sys.argv[1])).get("model") or "default")
+except Exception:
+    print("default")
+PY
+}
+
+agent_model() {
+  sed -n 's/^model: *//p' "$AGENTS_DIR/$1.md" 2>/dev/null | head -n1
+}
+
+set_session() {
+  local alias="$1"
+  if [ "$alias" != "default" ] && ! valid_alias "$alias"; then die "unknown model alias: $alias"; fi
+  mkdir -p "$CLAUDE_HOME"
+  [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
+  python3 - "$SETTINGS" "$alias" <<'PY'
+import json,sys
+p,alias=sys.argv[1],sys.argv[2]
+d=json.load(open(p))
+if alias=="default": d.pop("model",None)
+else: d["model"]=alias
+json.dump(d,open(p,"w"),indent=2); open(p,"a").write("\n")
+PY
+  log "session model -> $alias (takes effect on the next session start)"
+}
+
+set_agents() {
+  local alias="$1"; shift
+  valid_alias "$alias" || die "unknown model alias: $alias"
+  [ "$alias" = "best" ] && die "'best' is a session alias; pick a concrete tier for agents"
+  local names="$*"; [ -n "$names" ] || names="$FABLE_TIER"
+  local n f
+  for n in $names; do
+    f="$AGENTS_DIR/$n.md"
+    [ -f "$f" ] || { warn "no such agent: $n ($f)"; continue; }
+    if grep -q '^model:' "$f"; then
+      sed -i.bak "s/^model: .*/model: $alias/" "$f" && rm -f "$f.bak"
+    else
+      # insert after the description line so the frontmatter stays readable
+      sed -i.bak "/^description:/a\\
+model: $alias" "$f" && rm -f "$f.bak"
+    fi
+    # keep the per-project copies honest too (they are never discovered, but
+    # anything reading them as persona files should see the same tier)
+    local copy
+    for copy in "$PROJECTS_DIR"/*/.claude/agents/"$n".md; do
+      [ -f "$copy" ] && cp "$f" "$copy"
+    done
+    log "agent $n -> $alias (next spawn)"
+  done
+}
+
+cmd="${1:-show}"; shift || true
+case "$cmd" in
+  show)
+    log "session: $(session_model)  (settings: $SETTINGS)"
+    if [ -d "$AGENTS_DIR" ]; then
+      for f in "$AGENTS_DIR"/*.md; do
+        n="$(basename "$f" .md)"
+        printf '  %-30s %s\n' "$n" "$(agent_model "$n")"
+      done
+    fi
+    if [ -f "$STATE" ]; then
+      warn "downshifted: $(cat "$STATE")  — run 'kappmaker-model restore' to go back to Fable"
+    fi
+    ;;
+  session)
+    alias="${1:-}"; [ -n "$alias" ] || { usage; exit 2; }
+    set_session "$alias"
+    if [ "${2:-}" = "--restart" ]; then
+      log "restarting the always-on session: $RESTART_CMD"
+      eval "$RESTART_CMD"
+    else
+      log "not restarted — run with --restart, or: $RESTART_CMD"
+    fi
+    ;;
+  agents)
+    alias="${1:-}"; [ -n "$alias" ] || { usage; exit 2; }; shift
+    set_agents "$alias" "$@"
+    ;;
+  downshift)
+    reason="${*:-usage limit}"
+    set_agents opus
+    printf '%s  %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$reason" > "$STATE"
+    log "recorded: $(cat "$STATE")"
+    ;;
+  restore)
+    set_agents fable
+    rm -f "$STATE"
+    log "restored Fable tier"
+    ;;
+  -h|--help|help) usage ;;
+  *) usage; exit 2 ;;
+esac

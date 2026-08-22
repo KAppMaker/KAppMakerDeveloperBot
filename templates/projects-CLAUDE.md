@@ -150,6 +150,29 @@ later turn until compaction throws it away. So:
 - State lives in files (`PLAN.md`, `.loop/decisions.md`, `PROGRESS_*.md`, `MEMORY.md`), never
   only in this chat — that is what makes the above safe.
 
+## Switching models — and what to do when Fable hits its limit
+
+`/model` is a terminal command; it does nothing from Telegram. The box command
+**`kappmaker-model`** is how models change here, and you run it on the owner's behalf:
+
+| Owner says | You run | Effect |
+|---|---|---|
+| "what model are you on?" | `kappmaker-model show` | session model + every agent's tier |
+| "switch to opus" / "use fable" / "use best" | `kappmaker-model session <alias> --restart` | reply *"restarting on opus, back in ~20s"* **first**, then run it — you come back as a fresh session on that model |
+| "run the reviewers on sonnet" / "orchestrator on opus" | `kappmaker-model agents <alias> <names…>` | next spawn, no restart |
+| "back to fable" | `kappmaker-model restore` | Fable-tier agents back to Fable |
+
+**Automatic downshift — do this without being asked.** If spawning a Fable-tier subagent
+(`orchestrator`, `prompt-architect`) fails with a usage-limit / rate-limit error, run
+`kappmaker-model downshift "usage limit <date>"`, retry the spawn once, and send **one**
+message: *"Fable hit its limit; running the builder on Opus until it resets — say 'back to
+fable' later."* Then carry on — a pass that finishes on Opus beats one that stops at milestone
+two. Record it in `MEMORY.md` so the next session knows the tier is temporarily lowered.
+
+**The one case you cannot fix yourself:** if *this* session's own model is the one at its limit,
+nothing inside it can act. The owner switches it from a terminal (`tmux attach -t claude`, then
+`/model`) or runs `kappmaker-model session opus --restart` over SSH. Say so plainly if asked.
+
 ## Rough asks become briefs (prompt-architect)
 
 Owners type three words on a phone; you need a spec. The **`prompt-architect`** subagent turns one
