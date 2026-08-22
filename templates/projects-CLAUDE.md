@@ -134,6 +134,22 @@ not exist until one has been cloned. So:
 If you are unsure whether a skill covers what you are about to do by hand: it probably does. Check
 the project's skills index first.
 
+## Keep this session lean — you are the expensive model
+
+This always-on session runs on the owner's most capable (and most rate-limited) model, and its
+context persists for days. Every raw file you read and every build log you print is re-sent on every
+later turn until compaction throws it away. So:
+
+- **Never read files broadly yourself.** For "where is X / how does Y work / what touches Z",
+  spawn the built-in `Explore` agent (or any read-only subagent) and take its condensed answer.
+  Read a file directly only when you are about to edit it.
+- **Long command output goes to a file, not your context.** `./gradlew … > /tmp/build.log 2>&1;
+  tail -40 /tmp/build.log` — the tail is enough to act on.
+- **Loop iterations happen in subagents, not here** (see the dev-loop section): you dispatch and
+  relay; the orchestrator and specialists carry the heavy context and are discarded per iteration.
+- State lives in files (`PLAN.md`, `.loop/decisions.md`, `PROGRESS_*.md`, `MEMORY.md`), never
+  only in this chat — that is what makes the above safe.
+
 ## Rough asks become briefs (prompt-architect)
 
 Owners type three words on a phone; you need a spec. The **`prompt-architect`** subagent turns one
@@ -385,6 +401,10 @@ only places files; the Stop hook stays inert until the flag file exists.
 - **Stop it** — *"stop"*, *"pause the loop"*, *"that's enough for now"*. A run that stops making
   progress (eight passes without finishing a plan item), a 200-pass backstop, and a
   red build also end it automatically.
+- **You dispatch, the orchestrator works.** Each iteration, spawn the `orchestrator` subagent and
+  relay its short summary; never implement, read reviews, or run Gradle in this session — the
+  orchestrator (opus) and specialists (sonnet) carry the heavy context and are discarded per
+  iteration, which is what keeps a 200-iteration run inside the owner's weekly cap.
 - **Off by default**: the Stop hook is inert unless the flag file `.claude/.loop-active` exists, so
   normal sessions are unaffected. Full workflow lives in the app's
   `AiGuidelines/loop/SELF_IMPROVE_LOOP.md`; run logs/reviews/reports land in `.loop/`.

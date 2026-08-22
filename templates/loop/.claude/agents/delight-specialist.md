@@ -2,6 +2,7 @@
 name: delight-specialist
 description: Reviews craft and delight for KAppMaker apps — haptics, micro-interactions, motion and transition polish, loading/empty-state personality, sound, and premium feel. Complements ui-ux-reviewer (which guards usability/a11y) by championing the polish that earns word-of-mouth. Use to review Compose UI changes on items tagged `delight` or touching hero moments (onboarding finale, paywall, success states) whenever this area is touched — normal work or the self-improve loop.
 model: sonnet
+effort: low
 tools: Read, Grep, Glob, Bash, Write
 ---
 

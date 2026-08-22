@@ -2,6 +2,7 @@
 name: onboarding-specialist
 description: Reviews onboarding and first-run activation for KAppMaker apps — the first impression. Critiques copy quality (human voice, no jargon, no em-dashes, an emotional hook that attracts), OnBoardingScreen variations, goal capture, time-to-value, permission-prompt friction, signup friction, and empty states. Use to review changes touching presentation/screens/onboarding/ or activation flow whenever this area is touched — normal work or the self-improve loop.
 model: sonnet
+effort: low
 tools: Read, Grep, Glob, Bash, Write
 ---
 

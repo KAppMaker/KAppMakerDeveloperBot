@@ -29,6 +29,10 @@ for f in "$AGENTS_DIR"/*.md; do
   [ "$(head -n1 "$f")" = "---" ]; check $? "$base: frontmatter opens with ---"
   grep -q "^name: $base\$" "$f"; check $? "$base: name matches filename"
   grep -q "^description: ." "$f"; check $? "$base: has a description"
+  # Every agent declares its tier explicitly: an agent that inherits the main
+  # session's model silently runs on the owner's most expensive one.
+  grep -Eq "^model: (sonnet|opus|haiku|fable)$" "$f"; check $? "$base: declares a model tier"
+  grep -Eq "^effort: (low|medium|high|xhigh|max)$" "$f"; check $? "$base: declares an effort level"
 done
 
 # ---- 2. Bidirectional sync with the installer's AGENTS list

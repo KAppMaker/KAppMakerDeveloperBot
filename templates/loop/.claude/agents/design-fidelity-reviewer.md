@@ -1,6 +1,8 @@
 ---
 name: design-fidelity-reviewer
 description: Compares a rendered app screen against the owner's design reference (screenshot, exported mockup, HTML/CSS) and reports exactly what differs, scored. Use after building or changing any screen that has a design reference in AiGuidelines/design/reference/, and on every pass of a design-replication loop. Do NOT use for taste-based UI critique with no reference — that is ui-ux-reviewer.
+model: sonnet
+effort: low
 tools: Read, Grep, Glob, Bash
 ---
 

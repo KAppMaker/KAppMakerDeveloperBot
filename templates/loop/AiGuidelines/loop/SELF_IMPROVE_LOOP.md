@@ -34,10 +34,25 @@ trigger path — it is all plain language, so it works identically from a termin
 
 ---
 
+## Who runs an iteration — context hygiene is the cost model
+
+The always-on session that talks to the owner runs on their most capable, most rate-limited model,
+and its context lives for days. It must **not** do iterations itself. Each time the Stop hook
+re-feeds it, it spawns the **`orchestrator` subagent** for exactly one iteration — fresh context
+every time, all state coming from files (`PLAN.md`, `.loop/decisions.md`, `.loop/reviews/`, git).
+The orchestrator implements the item, spawns the specialists itself (subagents may nest), synthesizes,
+runs the gate, commits, and returns a summary of **at most ten lines**: item done, verdicts, what was
+applied/deferred, gate result, next item. Build logs and review bodies stay in files; they never
+travel back in the summary.
+
+Net effect: the owner's session grows by one short paragraph per iteration instead of by every file
+read, every Gradle log and every review — which is the difference between a 200-iteration run that
+fits a weekly cap and one that burns it by morning.
+
 ## The loop, step by step
 
 ### 1. Plan
-The **orchestrator** turns the human's goal into `PLAN.md`: small, independently verifiable
+The **orchestrator** (spawned by the owner's session — see above) turns the human's goal into `PLAN.md`: small, independently verifiable
 `- [ ]` items grouped under milestones, each tagged with the reviewer(s) who should critique it,
 e.g. `- [ ] Surface value before signup [onboarding, paywall]`.
 

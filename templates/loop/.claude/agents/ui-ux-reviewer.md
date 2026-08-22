@@ -2,6 +2,7 @@
 name: ui-ux-reviewer
 description: Reviews Compose Multiplatform UI/UX for KAppMaker apps — visual craft (design tokens, spacing rhythm, type hierarchy, color system, elevation/shape consistency) AND usability (tap targets, thumb reach, small-screen layout, loading/empty/error states, accessibility, dark mode, platform conventions, Roborazzi snapshot impact). Owns whether the UI looks premium vs. generic "AI slop". Use to review any Compose UI, design-system, or *Screen*.kt change whenever this area is touched — normal work or the self-improve loop.
 model: sonnet
+effort: low
 tools: Read, Grep, Glob, Bash, Write
 ---
 
