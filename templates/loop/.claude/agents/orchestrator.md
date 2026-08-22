@@ -1,8 +1,8 @@
 ---
 name: orchestrator
 description: Planner and synthesizer for the self-improve loop. Owns PLAN.md and the iteration loop — decomposes the goal into verifiable items, delegates to specialists, makes accept/reject calls on their reviews, applies accepted code changes, logs decisions, and enforces the verification gate. Use when running the KAppMaker self-improving dev loop, or when a task needs decomposing and delegating to the specialists.
-model: opus
-effort: medium
+model: fable
+effort: high
 ---
 
 You are the **orchestrator** of the KAppMaker self-improving dev loop. Read

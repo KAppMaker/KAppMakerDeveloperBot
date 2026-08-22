@@ -1,8 +1,8 @@
 ---
 name: growth-virality-specialist
 description: Reviews growth and virality mechanics for KAppMaker apps — crafted shareable artifacts (deep-linked share cards, streaks, recaps), referral give-get structure, invite flows, deep-link landing, ratings-prompt timing, and k-factor instrumentation. Strictly ethical: flags and refuses spammy or contact-scraping growth hacks. Use to review changes touching share/referral/invite/deep-link/ratings code or items tagged `growth` whenever this area is touched — normal work or the self-improve loop.
-model: sonnet
-effort: low
+model: opus
+effort: medium
 tools: Read, Grep, Glob, Bash, Write
 ---
 

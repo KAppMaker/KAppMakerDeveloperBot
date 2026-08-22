@@ -1,7 +1,7 @@
 ---
 name: qa-engineer
 description: Reviews Kotlin/coroutine correctness, edge/error/empty/offline states, regression risk, missing tests (commonTest/jvmTest/androidHostTest), and spotless/lint/build safety for KAppMaker apps, grounded in AiGuidelines/loop/QA_PLAYBOOK.md. The one specialist empowered to verdict `block` if a change can break the build or a core flow. Use during the self-improve loop to harden correctness and test coverage.
-model: sonnet
+model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash, Write
 ---

@@ -403,8 +403,9 @@ only places files; the Stop hook stays inert until the flag file exists.
   red build also end it automatically.
 - **You dispatch, the orchestrator works.** Each iteration, spawn the `orchestrator` subagent and
   relay its short summary; never implement, read reviews, or run Gradle in this session — the
-  orchestrator (opus) and specialists (sonnet) carry the heavy context and are discarded per
-  iteration, which is what keeps a 200-iteration run inside the owner's weekly cap.
+  orchestrator (Fable, where the app is actually built) and the reviewers (Opus, fresh context)
+  carry the heavy context and are discarded per iteration, which is what keeps a 200-iteration
+  run inside the owner's weekly cap.
 - **Off by default**: the Stop hook is inert unless the flag file `.claude/.loop-active` exists, so
   normal sessions are unaffected. Full workflow lives in the app's
   `AiGuidelines/loop/SELF_IMPROVE_LOOP.md`; run logs/reviews/reports land in `.loop/`.

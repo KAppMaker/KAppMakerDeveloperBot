@@ -1,8 +1,8 @@
 ---
 name: engagement-specialist
 description: Reviews the reward and progress system of KAppMaker apps — celebrations at real milestones, streak and progress mechanics, retention cadence (reminder/notification timing), and whether a mascot or tamagotchi-style companion fits the app. Complements delight-specialist (moment-to-moment polish) and growth-virality-specialist (outward share loops) by owning the inward loop that makes users come back. Use to review items tagged `engagement` or touching streak/milestone/celebration/notification-cadence/mascot code — normal work or the self-improve loop.
-model: sonnet
-effort: low
+model: opus
+effort: medium
 tools: Read, Grep, Glob, Bash, Write
 ---
 

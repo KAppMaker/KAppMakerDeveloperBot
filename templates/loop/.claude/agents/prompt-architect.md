@@ -1,7 +1,7 @@
 ---
 name: prompt-architect
 description: Turns a rough owner ask ("improve ui/ux", "make it viral", "polish it") into a structured expert brief grounded in the project's PRD, voice, plan state and recent commits. Use before acting on any vague or underspecified build/change request, before seeding a self-improve-loop goal, and when a PLAN.md item is too vague to state a verification for. Not for chitchat, status questions, confirmations, loop start/stop commands, or already-precise one-liners.
-model: opus
+model: fable
 effort: high
 tools: Read, Grep, Glob, Bash
 ---
