@@ -136,6 +136,34 @@ else
   exit 1
 fi
 
+# The unit's WorkingDirectory is this helper's boot folder, and systemd enters it
+# BEFORE the worker script runs, so the script cannot be the one to create it.
+# Missing, the unit fails with "Changing to the requested working directory
+# failed" and restarts every 15 s forever — a bot that never answers.
+BOOT_DIR="$HOME/workspaces/$INSTANCE"
+install -d -m 755 "$BOOT_DIR"
+
+# The first launch in a new folder stops at Claude Code's "do you trust this
+# folder?" prompt with "No, exit" preselected. Headless, nobody answers it, so
+# the bot sits silent. Pre-accept it for the boot folder, the same way
+# provisioning does for ~/projects. Merge, never overwrite: the other helpers
+# are running and write this file too.
+python3 - "$BOOT_DIR" <<'PY' || say "  (Couldn't pre-accept folder trust — if the bot stays silent, run: tmux attach -t claude-$INSTANCE and choose 'Yes, I trust this folder'.)"
+import json, os, sys, tempfile
+path = os.path.expanduser("~/.claude.json")
+try:
+    data = json.load(open(path))
+    mode = os.stat(path).st_mode & 0o777
+except Exception:
+    data, mode = {}, 0o600
+data.setdefault("projects", {}).setdefault(sys.argv[1], {})["hasTrustDialogAccepted"] = True
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path))
+with os.fdopen(fd, "w") as f:
+    json.dump(data, f, indent=2)
+os.chmod(tmp, mode)
+os.replace(tmp, path)
+PY
+
 # systemd template instance: claude-telegram@app2.service …
 if sudo -n systemctl enable --now "claude-telegram@$INSTANCE.service" 2>/dev/null; then
   ok "Helper started, and it will come back on its own after a reboot"
